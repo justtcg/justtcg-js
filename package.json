@@ -16,5 +16,9 @@
   "bugs": {
     "url": "https://github.com/justtcg/justtcg-js/issues"
   },
-  "homepage": "https://github.com/justtcg/justtcg-js#readme"
+  "homepage": "https://github.com/justtcg/justtcg-js#readme",
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2"
+  }
 }
