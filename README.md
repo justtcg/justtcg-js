@@ -81,12 +81,12 @@ For example:
   - `client.v1.sets.list({ game: 'Lorcana' })`
   - `client.v1.cards.getByIds(['card-id-1', 'card-id-2'])`
 
-For a full list of methods and parameters, please see our complete [API Documentation](https://justtcg.com/docs). (Note: Link is a placeholder).
+For a full list of methods and parameters, please see our complete [API Documentation](https://justtcg.com/docs).
 
 ## Contributing
 
-We welcome contributions\! Please see our [CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md) for details on how to get started.
+We welcome contributions\! Please see our CONTRIBUTING.md for details on how to get started.
 
 ## License
 
-This SDK is licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
+This SDK is licensed under the [MIT License](./LICENSE).
