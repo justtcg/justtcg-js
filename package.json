@@ -1,12 +1,24 @@
 {
-  "name": "justtcg",
-  "version": "1.0.0",
+  "name": "justtcg-js",
+  "version": "0.1.0",
   "description": "The official JavaScript/TypeScript SDK for the JustTCG API.",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    }
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc",
+    "build": "tsup",
     "lint": "eslint 'src/**/*.ts'",
     "format": "prettier --write 'src/**/*.ts'"
   },
@@ -15,7 +27,7 @@
     "url": "git+https://github.com/justtcg/justtcg-js.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "JustTCG <support@justtcg.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/justtcg/justtcg-js/issues"
