@@ -1,0 +1,20 @@
+{
+  "name": "justtcg",
+  "version": "1.0.0",
+  "description": "The official JavaScript/TypeScript SDK for the JustTCG API.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/justtcg/justtcg-js.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/justtcg/justtcg-js/issues"
+  },
+  "homepage": "https://github.com/justtcg/justtcg-js#readme"
+}
