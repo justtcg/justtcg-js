@@ -1,7 +1,7 @@
 # JustTCG JS/TS SDK
 
 [![NPM Version](https://img.shields.io/npm/v/justtcg-js.svg)](https://www.npmjs.com/package/justtcg-js)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/justtcg-js/ci.yml?branch=main)](https://github.com/YOUR_USERNAME/justtcg-js/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/justtcg/justtcg-js/ci.yml?branch=main)](https://github.com/justtcg/justtcg-js/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 The official, developer-friendly JavaScript/TypeScript SDK for the JustTCG API. Access real-time and historical pricing data for the world's most popular Trading Card Games.
