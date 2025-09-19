@@ -63,11 +63,14 @@ The client is organized by API version, resource, and method. The structure is a
 
 `client.[version].[resource].[method](params)`
 
-For example:
-
-  - `client.v1.games.list()`
-  - `client.v1.sets.list({ game: 'Lorcana' })`
-  - `client.v1.cards.getByIds(['card-id-1', 'card-id-2'])`
+- `client.v1.games`
+  - `.list()`: Fetches all supported games.
+- `client.v1.sets`
+  - `.list(params)`: Fetches a paginated list of sets.
+  - `.fetchAll(params)`: (Helper) Fetches all sets for a game, handling pagination automatically.
+- `client.v1.cards`
+  - `.get(params)`: Fetches cards with powerful search and filter parameters.
+  - `.getByBatch(items)`: Fetches multiple specific cards in a single request.
 
 For a full list of methods and parameters, please see our complete [API Documentation](https://justtcg.com/docs).
 
