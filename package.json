@@ -26,7 +26,17 @@
     "type": "git",
     "url": "git+https://github.com/justtcg/justtcg-js.git"
   },
-  "keywords": [],
+  "keywords": [
+    "justtcg",
+    "tcg",
+    "trading card game",
+    "api",
+    "sdk",
+    "pokemon",
+    "lorcana",
+    "magic the gathering",
+    "price api"
+  ],
   "author": "JustTCG <support@justtcg.com>",
   "license": "MIT",
   "bugs": {
