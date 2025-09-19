@@ -19,8 +19,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "tsup",
-    "lint": "eslint 'src/**/*.ts'",
-    "format": "prettier --write 'src/**/*.ts'"
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\""
   },
   "repository": {
     "type": "git",

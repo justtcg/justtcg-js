@@ -48,7 +48,7 @@ export class HttpClient {
     return response.json() as Promise<T>;
   }
 
-    /**
+  /**
    * Performs a POST request to a given path.
    * @param path The endpoint path (e.g., '/cards').
    * @param body The JSON body for the request.

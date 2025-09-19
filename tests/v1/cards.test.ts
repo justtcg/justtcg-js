@@ -21,7 +21,7 @@ describe('CardsResource', () => {
       // Arrange
       const params: GetCardsParams = { query: 'Charizard', limit: 10 };
       const mockRawResponse = {
-        data: [{ id: 'card-1', name: 'Charizard', game: 'pkm', set: 'base', variants: [] }],
+        data: [{ id: 'card-1', name: 'Charizard', game: 'pokemon', set: 'Base Set', variants: [] }],
         meta: { total: 1, limit: 10, offset: 0, hasMore: false },
         _metadata: {
           apiRequestLimit: 1000,
@@ -43,7 +43,7 @@ describe('CardsResource', () => {
     });
   });
 
-    describe('getByBatch', () => {
+  describe('getByBatch', () => {
     it('should fetch cards using a batch POST request', async () => {
       // Arrange
       const items: BatchLookupItem[] = [

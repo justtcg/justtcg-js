@@ -65,4 +65,59 @@ describe('SetsResource', () => {
     expect(result.data[0].name).toBe('Base Set');
     expect(result.pagination).toBeDefined();
   });
+
+  describe('fetchAll', () => {
+    it('should handle pagination and yield all sets', async () => {
+      // Arrange
+      // Mock the first page response
+      const mockPage1 = {
+        data: [{ id: 'set-1', name: 'Set Page 1' }],
+        meta: { total: 2, limit: 1, offset: 0, hasMore: true },
+        _metadata: {
+          apiRequestsUsed: 1,
+          apiRequestsRemaining: 999,
+          apiRequestLimit: 1000,
+          apiPlan: 'Free',
+        },
+      };
+      // Mock the second page response
+      const mockPage2 = {
+        data: [{ id: 'set-2', name: 'Set Page 2' }],
+        meta: { total: 2, limit: 1, offset: 1, hasMore: false },
+        _metadata: {
+          apiRequestsUsed: 2,
+          apiRequestsRemaining: 998,
+          apiRequestLimit: 1000,
+          apiPlan: 'Free',
+        },
+      };
+
+      // The mock will return page 1 first, then page 2 on the subsequent call
+      mockedHttpClient.get.mockResolvedValueOnce(mockPage1).mockResolvedValueOnce(mockPage2);
+
+      // Act: Consume the async generator and collect results
+      const allSets = [];
+      for await (const set of client.v1.sets.fetchAll({ game: 'Pokemon' })) {
+        allSets.push(set);
+      }
+
+      // Assert
+      // 1. Verify that the http client was called twice for the two pages
+      expect(mockedHttpClient.get).toHaveBeenCalledTimes(2);
+      expect(mockedHttpClient.get).toHaveBeenCalledWith('/sets', {
+        game: 'Pokemon',
+        limit: 100,
+        offset: 0,
+      });
+      expect(mockedHttpClient.get).toHaveBeenCalledWith('/sets', {
+        game: 'Pokemon',
+        limit: 100,
+        offset: 100,
+      });
+
+      // 2. Verify that all sets from all pages were collected
+      expect(allSets).toHaveLength(2);
+      expect(allSets.map((s) => s.name)).toEqual(['Set Page 1', 'Set Page 2']);
+    });
+  });
 });

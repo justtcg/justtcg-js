@@ -64,7 +64,7 @@ export interface VariantWithPrice {
   price: number | null;
   lastUpdated: number | null; // Epoch seconds
   priceChange24hr?: number | null; // Percentage
-  
+
   // --- 7d stats ---
   priceChange7d?: number | null; // Percentage
   avgPrice?: number | null; // Dollars
@@ -118,7 +118,7 @@ export interface VariantWithPrice {
  */
 export interface Card {
   id: string;
-  name:string;
+  name: string;
   game: string;
   set: string;
   number: string | null;

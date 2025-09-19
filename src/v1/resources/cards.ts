@@ -4,28 +4,49 @@ import { handleResponse } from '../../core/response-handler';
 import { HttpClient, QueryParams } from '../../core/http-client';
 import { Card, JustTCGApiResponse, PaginationMeta, UsageMeta } from '../../types';
 
-// Define the specific parameters for the GET /cards endpoint
-// This is based on the `ValidatedParams` from your backend types
+/**
+ * Parameters for the GET /cards endpoint.
+ */
 export interface GetCardsParams extends QueryParams {
+  /** A TCGplayer product ID. */
   tcgplayerId?: string;
+  /** A JustTCG card ID. */
   cardId?: string;
+  /** A JustTCG variant ID. */
   variantId?: string;
+  /** A general search query for the card's name. */
   query?: string;
+  /** The name of the game (e.g., 'Pokemon'). */
   game?: string;
+  /** The name of the set (e.g., 'Base Set'). */
   set?: string;
+  /** An array of card conditions to filter by (e.g., ['Near Mint', 'Lightly Played']). */
   condition?: string[];
+  /** An array of card print types to filter by (e.g., ['Foil', '1st Edition']). */
   printing?: string[];
+  /** The maximum number of results to return. Default is 20. */
   limit?: number;
+  /** The number of results to skip for pagination. */
   offset?: number;
+  /** The order to sort the results by. Can be 'asc' or 'desc'. Default is 'desc'. */
   order?: 'asc' | 'desc';
-  orderBy?: string; // Add specific orderBy options if available
+  /** The field to order the results by. Default is 'price'. */
+  orderBy?: 'price' | '24h' | '7d' | '30d' | '90d';
 }
 
+/**
+ * Describes a single item for a batch lookup request.
+ */
 export interface BatchLookupItem {
+  /** A TCGplayer product ID. */
   tcgplayerId?: string;
+  /** A JustTCG card ID. */
   cardId?: string;
+  /** A JustTCG variant ID. */
   variantId?: string;
+  /** An array of card print types to filter by. */
   printing?: string[];
+  /** An array of card conditions to filter by. */
   condition?: string[];
 }
 
@@ -33,13 +54,15 @@ interface BatchLookupBody {
   batchLookups: BatchLookupItem[];
 }
 
-// Define the specific shape of the raw response for this endpoint
 interface RawCardsApiResponse {
   data: Card[];
-  meta: PaginationMeta;
+  meta?: PaginationMeta;
   _metadata: UsageMeta;
 }
 
+/**
+ * Provides access to the /cards API resource.
+ */
 export class CardsResource {
   private httpClient: HttpClient;
 
@@ -50,17 +73,17 @@ export class CardsResource {
   /**
    * Retrieves a paginated list of cards based on a flexible set of query parameters.
    * @param params Parameters for searching, filtering, and paginating cards.
-   * @returns A JustTCG API response containing an array of Card objects.
+   * @returns A Promise resolving to the JustTCG API response containing an array of Card objects.
    */
   public async get(params: GetCardsParams): Promise<JustTCGApiResponse<Card[]>> {
     const rawResponse = await this.httpClient.get<RawCardsApiResponse>('/cards', params);
     return handleResponse(rawResponse);
   }
 
-    /**
+  /**
    * Retrieves a list of cards based on a batch of specific identifiers.
    * @param items An array of objects, each identifying a card to look up.
-   * @returns A JustTCG API response containing an array of the requested Card objects.
+   * @returns A Promise resolving to the JustTCG API response containing an array of the requested Card objects.
    */
   public async getByBatch(items: BatchLookupItem[]): Promise<JustTCGApiResponse<Card[]>> {
     const body: BatchLookupBody = { batchLookups: items };

@@ -15,7 +15,7 @@ describe('GamesResource', () => {
 
     // Create a new client instance for each test
     client = new JustTCG({ apiKey: 'test-key' });
-    
+
     // Get the mocked instance of HttpClient that the JustTCG client is using
     mockedHttpClient = client.v1.games['httpClient'] as Mocked<HttpClient>;
   });
@@ -34,7 +34,7 @@ describe('GamesResource', () => {
         apiPlan: 'Free Tier',
       },
     };
-    
+
     // Mock the `get` method to return our mock response
     mockedHttpClient.get.mockResolvedValue(mockRawResponse);
 
