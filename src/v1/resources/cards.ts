@@ -21,6 +21,18 @@ export interface GetCardsParams extends QueryParams {
   orderBy?: string; // Add specific orderBy options if available
 }
 
+export interface BatchLookupItem {
+  tcgplayerId?: string;
+  cardId?: string;
+  variantId?: string;
+  printing?: string[];
+  condition?: string[];
+}
+
+interface BatchLookupBody {
+  batchLookups: BatchLookupItem[];
+}
+
 // Define the specific shape of the raw response for this endpoint
 interface RawCardsApiResponse {
   data: Card[];
@@ -42,6 +54,17 @@ export class CardsResource {
    */
   public async get(params: GetCardsParams): Promise<JustTCGApiResponse<Card[]>> {
     const rawResponse = await this.httpClient.get<RawCardsApiResponse>('/cards', params);
+    return handleResponse(rawResponse);
+  }
+
+    /**
+   * Retrieves a list of cards based on a batch of specific identifiers.
+   * @param items An array of objects, each identifying a card to look up.
+   * @returns A JustTCG API response containing an array of the requested Card objects.
+   */
+  public async getByBatch(items: BatchLookupItem[]): Promise<JustTCGApiResponse<Card[]>> {
+    const body: BatchLookupBody = { batchLookups: items };
+    const rawResponse = await this.httpClient.post<RawCardsApiResponse>('/cards', body);
     return handleResponse(rawResponse);
   }
 }
