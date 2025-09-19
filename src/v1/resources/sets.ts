@@ -22,8 +22,11 @@ export class SetsResource {
    * @returns A JustTCG API response containing an array of Set objects.
    */
   public async list(params?: {
+    /** The name of the game to filter sets by (e.g., 'Pokemon'). */
     game?: string;
+    /** The maximum number of results to return. Default is 20. */
     limit?: number;
+    /** The number of results to skip for pagination. */
     offset?: number;
   }): Promise<JustTCGApiResponse<Set[]>> {
     const rawResponse = await this.httpClient.get<RawSetsApiResponse>('/sets', params);
@@ -36,7 +39,10 @@ export class SetsResource {
    * @param params Parameters to filter the sets, 'game' is required.
    * @yields A Set object for each set found.
    */
-  public async *fetchAll(params: { game: string }): AsyncGenerator<Set> {
+  public async *fetchAll(params: {
+    /** The name of the game to filter sets by (e.g., 'Pokemon'). */
+    game: string;
+  }): AsyncGenerator<Set> {
     const limit = 100; // A reasonable page size for fetching in the background
     let offset = 0;
     let hasMore = true;

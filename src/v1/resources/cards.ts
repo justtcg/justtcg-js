@@ -1,5 +1,3 @@
-// src/v1/resources/cards.ts
-
 import { handleResponse } from '../../core/response-handler';
 import { HttpClient, QueryParams } from '../../core/http-client';
 import { Card, JustTCGApiResponse, PaginationMeta, UsageMeta } from '../../types';
