@@ -21,7 +21,11 @@ export class SetsResource {
    * @param params Optional parameters to filter the list of sets.
    * @returns A JustTCG API response containing an array of Set objects.
    */
-  public async list(params?: { game: string }): Promise<JustTCGApiResponse<Set[]>> {
+  public async list(params?: {
+  game?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<JustTCGApiResponse<Set[]>> {
     const rawResponse = await this.httpClient.get<RawSetsApiResponse>('/sets', params);
     return handleResponse(rawResponse);
   }

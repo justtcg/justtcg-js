@@ -3,6 +3,10 @@ export interface HttpClientConfig {
   baseUrl: string;
 }
 
+export interface QueryParams {
+  [key: string]: string | string[] | number | boolean | undefined | null;
+}
+
 export class HttpClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -18,7 +22,7 @@ export class HttpClient {
    * @param params Optional query parameters.
    * @returns The JSON response from the API.
    */
-  public async get<T>(path: string, params?: Record<string, string | number | boolean | undefined | null>): Promise<T> {
+  public async get<T>(path: string, params?: QueryParams): Promise<T> {
     const url = new URL(`${this.baseUrl}${path}`);
 
     // Safely append query parameters
@@ -37,6 +41,29 @@ export class HttpClient {
 
     if (!response.ok) {
       // For now, we'll throw a generic error. We will enhance this later.
+      const errorBody = await response.json();
+      throw new Error(errorBody.error || 'An API error occurred');
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+    /**
+   * Performs a POST request to a given path.
+   * @param path The endpoint path (e.g., '/cards').
+   * @param body The JSON body for the request.
+   * @returns The JSON response from the API.
+   */
+  public async post<T>(path: string, body: unknown): Promise<T> {
+    const url = new URL(`${this.baseUrl}${path}`);
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
       const errorBody = await response.json();
       throw new Error(errorBody.error || 'An API error occurred');
     }
