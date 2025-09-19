@@ -35,7 +35,7 @@ describe('SetsResource', () => {
 
     // Assert
     expect(mockedHttpClient.get).toHaveBeenCalledOnce();
-    expect(mockedHttpClient.get).toHaveBeenCalledWith('/sets', undefined); // Called with no params
+    expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/sets', undefined); // Called with no params
     expect(result.data[0].name).toBe('The First Chapter');
     expect(result.pagination).toBeDefined();
     expect(result.pagination?.total).toBe(1);
@@ -61,7 +61,7 @@ describe('SetsResource', () => {
 
     // Assert
     expect(mockedHttpClient.get).toHaveBeenCalledOnce();
-    expect(mockedHttpClient.get).toHaveBeenCalledWith('/sets', params); // Called with params
+    expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/sets', params); // Called with params
     expect(result.data[0].name).toBe('Base Set');
     expect(result.pagination).toBeDefined();
   });
@@ -104,12 +104,12 @@ describe('SetsResource', () => {
       // Assert
       // 1. Verify that the http client was called twice for the two pages
       expect(mockedHttpClient.get).toHaveBeenCalledTimes(2);
-      expect(mockedHttpClient.get).toHaveBeenCalledWith('/sets', {
+      expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/sets', {
         game: 'Pokemon',
         limit: 100,
         offset: 0,
       });
-      expect(mockedHttpClient.get).toHaveBeenCalledWith('/sets', {
+      expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/sets', {
         game: 'Pokemon',
         limit: 100,
         offset: 100,

@@ -1,5 +1,3 @@
-// src/v1/resources/games.ts
-
 import { handleResponse } from '../../core/response-handler';
 import { Game, JustTCGApiResponse, UsageMeta } from '../../types';
 import { BaseResource } from './base';

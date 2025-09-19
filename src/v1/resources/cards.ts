@@ -80,7 +80,7 @@ export class CardsResource extends BaseResource {
    */
   public async getByBatch(items: BatchLookupItem[]): Promise<JustTCGApiResponse<Card[]>> {
     const body: BatchLookupBody = { batchLookups: items };
-    const rawResponse = await this.httpClient.post<RawCardsApiResponse>('/cards', body);
+    const rawResponse = await this._post<RawCardsApiResponse>('/cards', body);
     return handleResponse(rawResponse);
   }
 }

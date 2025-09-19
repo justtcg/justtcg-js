@@ -37,7 +37,7 @@ describe('CardsResource', () => {
 
       // Assert
       expect(mockedHttpClient.get).toHaveBeenCalledOnce();
-      expect(mockedHttpClient.get).toHaveBeenCalledWith('/cards', params);
+      expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/cards', params);
       expect(result.data[0].name).toBe('Charizard');
       expect(result.pagination?.limit).toBe(10);
     });
@@ -71,7 +71,7 @@ describe('CardsResource', () => {
       // Assert
       expect(mockedHttpClient.post).toHaveBeenCalledOnce();
       // Verify that the body sent matches the API's expected structure
-      expect(mockedHttpClient.post).toHaveBeenCalledWith('/cards', { batchLookups: items });
+      expect(mockedHttpClient.post).toHaveBeenCalledWith('/v1/cards', { batchLookups: items });
       expect(result.data).toHaveLength(2);
       expect(result.data[0].name).toBe('Pikachu');
       expect(result.pagination).toBeUndefined();

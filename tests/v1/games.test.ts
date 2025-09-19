@@ -44,7 +44,7 @@ describe('GamesResource', () => {
     // Assert: Verify the results
     // 1. Check that the http client was called correctly
     expect(mockedHttpClient.get).toHaveBeenCalledOnce();
-    expect(mockedHttpClient.get).toHaveBeenCalledWith('/games');
+    expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/games', undefined);
 
     // 2. Check that the data is transformed and correct
     expect(result.data).toHaveLength(2);
