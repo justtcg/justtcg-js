@@ -4,7 +4,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/justtcg/justtcg-js/ci.yml?branch=main)](https://github.com/justtcg/justtcg-js/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-The official, developer-friendly JavaScript/TypeScript SDK for the JustTCG API. Access real-time and historical pricing data for the world's most popular Trading Card Games.
+The official JavaScript/TypeScript SDK for the JustTCG API. Access real-time and historical pricing data for the world's most popular Trading Card Games.
 
 ## Features
 
@@ -26,50 +26,38 @@ npm install justtcg-js
 Get your API key from your [JustTCG Dashboard](https://justtcg.com/dashboard). For security, we recommend storing your API key in an environment variable.
 
 ```typescript
-import { JustTCG, JustTCGAuthenticationError } from 'justtcg-js';
+import { JustTCG } from 'justtcg-js';
 
-// The client automatically looks for the JUSTTCG_API_KEY environment variable.
-// You can also pass it in directly: new JustTCG({ apiKey: '...' })
 const client = new JustTCG();
 
-async function getCardData() {
-  try {
-    // Example 1: Search for cards across all games
-    console.log('--- Searching for "Pikachu" cards ---');
-    const searchResult = await client.v1.cards.search({
-      query: 'Pikachu',
-      limit: 5,
-    });
-
-    console.log(`Found ${searchResult.pagination.total} cards. Showing the first ${searchResult.data.length}.`);
-    // Print the name and price of the first variant of the first card
-    for (const card of searchResult.data) {
-        const firstVariantPrice = card.variants[0]?.price ?? 'N/A';
-        console.log(`- ${card.name} (${card.set}): $${firstVariantPrice}`);
-    }
-
-    console.log('\nAPI Requests Remaining:', searchResult.usage.apiRequestsRemaining);
-
-
-    // Example 2: Get a list of all supported games
-    console.log('\n--- Fetching all supported games ---');
-    const gamesResult = await client.v1.games.list();
-    console.log('Supported Games:', gamesResult.data.map(g => g.name).join(', '));
-
-  } catch (error) {
-    if (error instanceof JustTCGAuthenticationError) {
-      console.error('Authentication failed. Please check your API key.');
-    } else {
-      console.error('An API error occurred:', error.message);
-    }
+async function getPokemonSets() {
+  console.log('Fetching all Pokémon sets...');
+  
+  // The fetchAll helper handles pagination for you automatically!
+  for await (const set of client.v1.sets.fetchAll({ game: 'Pokemon' })) {
+    console.log(`- ${set.name} (Released: ${set.releaseDate ?? 'N/A'})`);
   }
 }
 
-getCardData();
+getPokemonSets().catch(error => {
+  console.error('An error occurred:', error.message);
+});
 
 ```
 
-## Usage
+# Examples
+
+You can find practical, runnable examples in the `/examples` directory of this repository.
+
+To run an example, first ensure you have set your `JUSTTCG_API_KEY` environment variable.
+
+```bash
+# Example: Find the most valuable Lorcana cards from The First Chapter
+export JUSTTCG_API_KEY="YOUR_API_KEY_HERE"
+npx ts-node examples/find-most-valuable-lorcana-cards.ts
+```
+
+## API Reference
 
 The client is organized by API version, resource, and method. The structure is always:
 

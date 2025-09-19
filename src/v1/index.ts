@@ -9,8 +9,10 @@ export class V1Client {
   public readonly cards: CardsResource;
 
   constructor(httpClient: HttpClient) {
-    this.games = new GamesResource(httpClient);
-    this.sets = new SetsResource(httpClient);
-    this.cards = new CardsResource(httpClient);
+    const pathPrefix = '/v1';
+    
+    this.games = new GamesResource(httpClient, pathPrefix);
+    this.sets = new SetsResource(httpClient, pathPrefix);
+    this.cards = new CardsResource(httpClient, pathPrefix);
   }
 }

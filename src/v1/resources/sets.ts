@@ -1,6 +1,6 @@
 import { handleResponse } from '../../core/response-handler';
-import { HttpClient } from '../../core/http-client';
 import { JustTCGApiResponse, PaginationMeta, Set, UsageMeta } from '../../types';
+import { BaseResource } from './base';
 
 // Define the specific shape of the raw response for this endpoint
 interface RawSetsApiResponse {
@@ -9,13 +9,7 @@ interface RawSetsApiResponse {
   _metadata: UsageMeta;
 }
 
-export class SetsResource {
-  private httpClient: HttpClient;
-
-  constructor(httpClient: HttpClient) {
-    this.httpClient = httpClient;
-  }
-
+export class SetsResource extends BaseResource {
   /**
    * Retrieves a paginated list of sets, optionally filtered by game.
    * @param params Optional parameters to filter the list of sets.
@@ -29,7 +23,7 @@ export class SetsResource {
     /** The number of results to skip for pagination. */
     offset?: number;
   }): Promise<JustTCGApiResponse<Set[]>> {
-    const rawResponse = await this.httpClient.get<RawSetsApiResponse>('/sets', params);
+    const rawResponse = await this._get<RawSetsApiResponse>('/sets', params);
     return handleResponse(rawResponse);
   }
 

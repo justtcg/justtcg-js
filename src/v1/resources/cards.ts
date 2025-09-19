@@ -1,6 +1,7 @@
 import { handleResponse } from '../../core/response-handler';
-import { HttpClient, QueryParams } from '../../core/http-client';
+import { QueryParams } from '../../core/http-client';
 import { Card, JustTCGApiResponse, PaginationMeta, UsageMeta } from '../../types';
+import { BaseResource } from './base';
 
 /**
  * Parameters for the GET /cards endpoint.
@@ -61,20 +62,14 @@ interface RawCardsApiResponse {
 /**
  * Provides access to the /cards API resource.
  */
-export class CardsResource {
-  private httpClient: HttpClient;
-
-  constructor(httpClient: HttpClient) {
-    this.httpClient = httpClient;
-  }
-
+export class CardsResource extends BaseResource {
   /**
    * Retrieves a paginated list of cards based on a flexible set of query parameters.
    * @param params Parameters for searching, filtering, and paginating cards.
    * @returns A Promise resolving to the JustTCG API response containing an array of Card objects.
    */
   public async get(params: GetCardsParams): Promise<JustTCGApiResponse<Card[]>> {
-    const rawResponse = await this.httpClient.get<RawCardsApiResponse>('/cards', params);
+    const rawResponse = await this._get<RawCardsApiResponse>('/cards', params);
     return handleResponse(rawResponse);
   }
 
