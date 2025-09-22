@@ -17,6 +17,8 @@ interface RawApiResponse<T> {
     apiRequestsRemaining: number;
     apiPlan: string;
   };
+  error?: string;
+  code?: string;
 }
 
 /**
@@ -45,5 +47,7 @@ export function handleResponse<T>(rawResponse: RawApiResponse<T>): JustTCGApiRes
     data: rawResponse.data,
     pagination,
     usage,
+    ...(rawResponse.error && { error: rawResponse.error }),
+    ...(rawResponse.code && { code: rawResponse.code }),
   };
 }

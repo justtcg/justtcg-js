@@ -7,6 +7,8 @@ interface RawSetsApiResponse {
   data: Set[];
   meta: PaginationMeta; // The sets endpoint is paginated
   _metadata: UsageMeta;
+  error?: string;
+  code?: string;
 }
 
 export class SetsResource extends BaseResource {
@@ -25,33 +27,5 @@ export class SetsResource extends BaseResource {
   }): Promise<JustTCGApiResponse<Set[]>> {
     const rawResponse = await this._get<RawSetsApiResponse>('/sets', params);
     return handleResponse(rawResponse);
-  }
-
-  /**
-   * Fetches all sets for a given game, handling pagination automatically.
-   * This method is an async generator, yielding one set at a time.
-   * @param params Parameters to filter the sets, 'game' is required.
-   * @yields A Set object for each set found.
-   */
-  public async *fetchAll(params: {
-    /** The name of the game to filter sets by (e.g., 'Pokemon'). */
-    game: string;
-  }): AsyncGenerator<Set> {
-    const limit = 100; // A reasonable page size for fetching in the background
-    let offset = 0;
-    let hasMore = true;
-
-    do {
-      const response = await this.list({ ...params, limit, offset });
-
-      if (response.data && response.data.length > 0) {
-        for (const set of response.data) {
-          yield set;
-        }
-      }
-
-      hasMore = response.pagination?.hasMore ?? false;
-      offset += limit;
-    } while (hasMore);
   }
 }

@@ -14,7 +14,8 @@ async function listAllSets() {
 
     // The for-await-of loop works with our async generator, handling
     // all the pagination API calls for you in the background.
-    for await (const set of client.v1.sets.fetchAll({ game: 'Pokemon' })) {
+    const response = await client.v1.sets.list();
+    for (const set of response.data) {
       console.log(`- ${set.name} (id: ${set.id ?? 'N/A'})`);
       setCount++;
     }

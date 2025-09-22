@@ -42,6 +42,8 @@ export interface JustTCGApiResponse<T> {
   data: T;
   pagination?: PaginationMeta;
   usage: UsageMeta;
+  error?: string;
+  code?: string;
 }
 
 /**
