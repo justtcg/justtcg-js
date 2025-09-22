@@ -27,7 +27,6 @@ async function updateInventoryPrices() {
     }
 
     console.log(`\nAPI requests remaining: ${response.usage.apiRequestsRemaining}`);
-
   } catch (error) {
     console.error('An error occurred:', (error as Error).message);
     process.exit(1);
