@@ -49,8 +49,18 @@ export interface BatchLookupItem {
   condition?: string[];
 }
 
-interface BatchLookupBody {
-  batchLookups: BatchLookupItem[];
+/**
+ * Optional parameters for the `search` method.
+ */
+export interface SearchCardsOptions {
+  /** The name of the game to filter by (e.g., 'Pokemon'). */
+  game?: string;
+  /** The name of the set to filter by (e.g., 'Base Set'). */
+  set?: string;
+  /** The maximum number of results to return. Default is 20. */
+  limit?: number;
+  /** The number of results to skip for pagination. */
+  offset?: number;
 }
 
 interface RawCardsApiResponse {
@@ -79,8 +89,26 @@ export class CardsResource extends BaseResource {
    * @returns A Promise resolving to the JustTCG API response containing an array of the requested Card objects.
    */
   public async getByBatch(items: BatchLookupItem[]): Promise<JustTCGApiResponse<Card[]>> {
-    const body: BatchLookupBody = { batchLookups: items };
-    const rawResponse = await this._post<RawCardsApiResponse>('/cards', body);
+    const rawResponse = await this._post<RawCardsApiResponse>('/cards', items);
     return handleResponse(rawResponse);
+  }
+
+  /**
+   * A convenience method to search for cards by a query string.
+   * This is a wrapper around the more flexible `get` method.
+   * @param query A search query for the card's name.
+   * @param options Optional parameters to filter or paginate the search results.
+   * @returns A Promise resolving to the JustTCG API response containing an array of Card objects.
+   */
+  public async search(
+    query: string,
+    options?: SearchCardsOptions,
+  ): Promise<JustTCGApiResponse<Card[]>> {
+    // This helper calls our powerful 'get' method with a simplified set of options.
+    const params: GetCardsParams = {
+      query,
+      ...options,
+    };
+    return this.get(params);
   }
 }

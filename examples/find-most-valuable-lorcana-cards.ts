@@ -6,6 +6,7 @@ async function findTopCards() {
   try {
     console.log('Initializing JustTCG Client...');
     const client = new JustTCG(); // Assumes JUSTTCG_API_KEY is in your environment
+    // const client = new JustTCG({ apiKey: 'your_api_key_here' }); // Or provide it directly
 
     const game = 'Disney Lorcana';
     const set = 'The First Chapter';

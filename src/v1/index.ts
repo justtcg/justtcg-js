@@ -10,7 +10,7 @@ export class V1Client {
 
   constructor(httpClient: HttpClient) {
     const pathPrefix = '/v1';
-    
+
     this.games = new GamesResource(httpClient, pathPrefix);
     this.sets = new SetsResource(httpClient, pathPrefix);
     this.cards = new CardsResource(httpClient, pathPrefix);

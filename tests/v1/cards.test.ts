@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, Mocked } from 'vitest';
 import { JustTCG } from '../../src/index';
 import { HttpClient } from '../../src/core/http-client';
-import { BatchLookupItem, GetCardsParams } from '../../src/v1/resources/cards';
+import { BatchLookupItem, GetCardsParams, SearchCardsOptions } from '../../src/v1/resources/cards';
 
 // Mock the entire HttpClient module
 vi.mock('../../src/core/http-client');
@@ -75,6 +75,33 @@ describe('CardsResource', () => {
       expect(result.data).toHaveLength(2);
       expect(result.data[0].name).toBe('Pikachu');
       expect(result.pagination).toBeUndefined();
+    });
+  });
+
+  describe('search', () => {
+    it('should call the get method with the correct query parameter', async () => {
+      // Spy on the 'get' method of the actual class instance
+      const getSpy = vi.spyOn(client.v1.cards, 'get');
+      // We still need to mock the underlying http client to prevent a real network call
+      mockedHttpClient.get.mockResolvedValue({ data: [], _metadata: {} });
+
+      const query = 'Pikachu';
+      await client.v1.cards.search(query);
+
+      expect(getSpy).toHaveBeenCalledOnce();
+      expect(getSpy).toHaveBeenCalledWith({ query });
+    });
+
+    it('should call the get method with the query and additional options', async () => {
+      const getSpy = vi.spyOn(client.v1.cards, 'get');
+      mockedHttpClient.get.mockResolvedValue({ data: [], _metadata: {} });
+
+      const query = 'Eevee';
+      const options: SearchCardsOptions = { limit: 5, game: 'Pokemon' };
+      await client.v1.cards.search(query, options);
+
+      expect(getSpy).toHaveBeenCalledOnce();
+      expect(getSpy).toHaveBeenCalledWith({ query, ...options });
     });
   });
 });
