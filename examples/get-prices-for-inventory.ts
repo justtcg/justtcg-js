@@ -7,6 +7,7 @@ import { JustTCG } from '../src';
 async function updateInventoryPrices() {
   try {
     const client = new JustTCG();
+    // const client = new JustTCG({ apiKey: 'your_api_key_here' }); // Or provide it directly
 
     // Imagine this is your store's inventory. You can look up items
     // using different identifiers in the same request.

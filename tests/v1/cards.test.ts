@@ -71,7 +71,7 @@ describe('CardsResource', () => {
       // Assert
       expect(mockedHttpClient.post).toHaveBeenCalledOnce();
       // Verify that the body sent matches the API's expected structure
-      expect(mockedHttpClient.post).toHaveBeenCalledWith('/v1/cards', items );
+      expect(mockedHttpClient.post).toHaveBeenCalledWith('/v1/cards', items);
       expect(result.data).toHaveLength(2);
       expect(result.data[0].name).toBe('Pikachu');
       expect(result.pagination).toBeUndefined();
