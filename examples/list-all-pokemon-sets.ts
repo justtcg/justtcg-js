@@ -20,7 +20,6 @@ async function listAllSets() {
     }
 
     console.log(`\nFound a total of ${setCount} sets.`);
-
   } catch (error) {
     console.error('An error occurred:', (error as Error).message);
     process.exit(1);
