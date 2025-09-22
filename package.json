@@ -1,6 +1,6 @@
 {
   "name": "justtcg-js",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "The official JavaScript/TypeScript SDK for the JustTCG API.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
