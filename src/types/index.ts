@@ -14,6 +14,7 @@ export interface Game {
 export interface Set {
   id: string;
   name: string;
+  count: number;
   gameId: string;
 }
 
@@ -92,11 +93,11 @@ export interface PriceHistoryEntry {
  */
 export interface VariantWithPrice {
   id: string;
-  condition: string | null;
-  printing: string | null;
+  condition: string;
+  printing: string;
   language: string | null;
-  price: number | null;
-  lastUpdated: number | null; // Epoch seconds
+  price: number;
+  lastUpdated: number; // Epoch seconds
   priceChange24hr?: number | null; // Percentage
 
   // --- 7d stats ---
