@@ -19,6 +19,7 @@ async function findTopCards() {
       orderBy: 'price', // Sort by the market price
       order: 'desc', // In descending order
       limit: 10, // Get the top 10
+      condition: ["NM", "LP", "MP", "HP", "D"], // Exclude sealed cards
     });
 
     console.log('\n--- Top 10 Most Valuable Cards ---');
