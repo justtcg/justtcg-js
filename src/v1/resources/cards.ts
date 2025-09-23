@@ -1,37 +1,6 @@
 import { handleResponse } from '../../core/response-handler';
-import { QueryParams } from '../../core/http-client';
-import { Card, JustTCGApiResponse, PaginationMeta, UsageMeta } from '../../types';
+import { Card, GetCardsParams, JustTCGApiResponse, PaginationMeta, UsageMeta } from '../../types';
 import { BaseResource } from './base';
-
-/**
- * Parameters for the GET /cards endpoint.
- */
-export interface GetCardsParams extends QueryParams {
-  /** A TCGplayer product ID. */
-  tcgplayerId?: string;
-  /** A JustTCG card ID. */
-  cardId?: string;
-  /** A JustTCG variant ID. */
-  variantId?: string;
-  /** A general search query for the card's name. */
-  query?: string;
-  /** The name of the game (e.g., 'Pokemon'). */
-  game?: string;
-  /** The name of the set (e.g., 'Base Set'). */
-  set?: string;
-  /** An array of card conditions to filter by (e.g., ['Near Mint', 'Lightly Played']). */
-  condition?: string[];
-  /** An array of card print types to filter by (e.g., ['Foil', '1st Edition']). */
-  printing?: string[];
-  /** The maximum number of results to return. Default is 20. */
-  limit?: number;
-  /** The number of results to skip for pagination. */
-  offset?: number;
-  /** The order to sort the results by. Can be 'asc' or 'desc'. Default is 'desc'. */
-  order?: 'asc' | 'desc';
-  /** The field to order the results by. Default is 'price'. */
-  orderBy?: 'price' | '24h' | '7d' | '30d' | '90d';
-}
 
 /**
  * Describes a single item for a batch lookup request.

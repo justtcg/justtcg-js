@@ -1,5 +1,3 @@
-// src/index.ts
-
 import { HttpClient } from './core/http-client';
 import { V1Client } from './v1'; // Import the new V1Client
 
