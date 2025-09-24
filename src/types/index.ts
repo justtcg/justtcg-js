@@ -1,4 +1,4 @@
-import { QueryParams } from "../core/http-client";
+import { QueryParams } from '../core/http-client';
 
 /**
  * Represents a single Trading Card Game.
@@ -91,7 +91,7 @@ export interface PriceHistoryEntry {
  * Represents a specific version of a card (e.g., Near Mint, 1st Edition Foil).
  * Contains detailed pricing and statistical data.
  */
-export interface VariantWithPrice {
+export interface Variant {
   id: string;
   condition: string;
   printing: string;
@@ -160,5 +160,5 @@ export interface Card {
   rarity: string | null;
   tcgplayerId: string | null;
   details?: string | null;
-  variants: VariantWithPrice[];
+  variants: Variant[];
 }
