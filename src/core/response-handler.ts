@@ -15,6 +15,10 @@ interface RawApiResponse<T> {
     apiRequestLimit: number;
     apiRequestsUsed: number;
     apiRequestsRemaining: number;
+    apiDailyLimit: number;
+    apiDailyRequestsUsed: number;
+    apiDailyRequestsRemaining: number;
+    apiRateLimit: number;
     apiPlan: string;
   };
   error?: string;
@@ -29,8 +33,12 @@ interface RawApiResponse<T> {
 export function handleResponse<T>(rawResponse: RawApiResponse<T>): JustTCGApiResponse<T> {
   const usage: UsageMeta = {
     apiRequestLimit: rawResponse._metadata.apiRequestLimit,
-    apiRequestsRemaining: rawResponse._metadata.apiRequestsRemaining,
+    apiDailyLimit: rawResponse._metadata.apiDailyLimit,
+    apiRateLimit: rawResponse._metadata.apiRateLimit,
     apiRequestsUsed: rawResponse._metadata.apiRequestsUsed,
+    apiDailyRequestsUsed: rawResponse._metadata.apiDailyRequestsUsed,
+    apiRequestsRemaining: rawResponse._metadata.apiRequestsRemaining,
+    apiDailyRequestsRemaining: rawResponse._metadata.apiDailyRequestsRemaining,
     apiPlan: rawResponse._metadata.apiPlan,
   };
 

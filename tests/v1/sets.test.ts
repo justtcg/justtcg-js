@@ -36,7 +36,6 @@ describe('SetsResource', () => {
     // Assert
     expect(mockedHttpClient.get).toHaveBeenCalledOnce();
     expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/sets', undefined); // Called with no params
-    console.log(result);
     expect(result.error).toBe('Required query parameter "game" is missing');
     expect(result.code).toBe('INVALID_REQUEST');
   });

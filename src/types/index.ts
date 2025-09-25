@@ -4,17 +4,27 @@ import { QueryParams } from '../core/http-client';
  * Represents a single Trading Card Game.
  */
 export interface Game {
+  /** The id of this game. */
   id: string;
+  /** The name of this game. */
   name: string;
+  /** The total number of cards in this game. */
+  cards_count: number;
+  /** The total number of sets in this game. */
+  sets_count: number;
 }
 
 /**
  * Represents a single Card Set within a Game.
  */
 export interface Set {
+  /** The id of this set. */
   id: string;
+  /** The name of this set. */
   name: string;
+  /** The number of cards in this set. */
   count: number;
+  /** The id of the game this set belongs to. */
   gameId: string;
 }
 
@@ -52,9 +62,13 @@ export interface GetCardsParams extends QueryParams {
  * Pagination metadata included in paginated API responses.
  */
 export interface PaginationMeta {
+  /** The total number of items available for this query. */
   total: number;
+  /** The maximum number of items returned per page. */
   limit: number;
+  /** The number of items skipped before starting to collect the result set. */
   offset: number;
+  /** Indicates if there are more items to fetch beyond the current page. */
   hasMore: boolean;
 }
 
@@ -62,9 +76,21 @@ export interface PaginationMeta {
  * API usage metadata returned in every successful API response.
  */
 export interface UsageMeta {
+  /** The maximum number of API requests allowed per billing cycle. */
   apiRequestLimit: number;
-  apiRequestsRemaining: number;
+  /** The maximum number of API requests allowed per day. */
+  apiDailyLimit: number;
+  /** The maximum number of API requests allowed per minute. */
+  apiRateLimit: number;
+  /** The number of API requests used in the current billing cycle. */
   apiRequestsUsed: number;
+  /** The number of API requests used today. */
+  apiDailyRequestsUsed: number;
+  /** The number of API requests remaining in the current billing cycle. */
+  apiRequestsRemaining: number;
+  /** The number of API requests remaining today. */
+  apiDailyRequestsRemaining: number;
+  /** The API plan name. */
   apiPlan: string;
 }
 
@@ -72,10 +98,15 @@ export interface UsageMeta {
  * The structured, clean response object our SDK provides.
  */
 export interface JustTCGApiResponse<T> {
+  /** The main data payload from the API. */
   data: T;
+  /** Pagination metadata, if the response is paginated. */
   pagination?: PaginationMeta;
+  /** API usage metadata. */
   usage: UsageMeta;
+  /** Error message, if the request failed. */
   error?: string;
+  /** Error code, if the request failed. */
   code?: string;
 }
 
@@ -83,8 +114,10 @@ export interface JustTCGApiResponse<T> {
  * A single entry in a variant's price history.
  */
 export interface PriceHistoryEntry {
-  t: number; // Date epoch in seconds
-  p: number; // Price in USD
+  /** Epoch timestamp in seconds. */
+  t: number;
+  /** Price in dollars. */
+  p: number;
 }
 
 /**
@@ -92,17 +125,27 @@ export interface PriceHistoryEntry {
  * Contains detailed pricing and statistical data.
  */
 export interface Variant {
+  /** The unique identifier for this variant. */
   id: string;
+  /** The condition of the card variant (e.g., Near Mint). */
   condition: string;
+  /** The printing type of the card variant (e.g., Foil, 1st Edition). */
   printing: string;
+  /** The language of the card variant, if applicable. */
   language: string | null;
+  /** The current price of the card variant in dollars. */
   price: number;
+  /** The last time the price was updated, as an epoch timestamp in seconds. */
   lastUpdated: number; // Epoch seconds
+  /** The percentage change in price over the last 24 hours. */
   priceChange24hr?: number | null; // Percentage
 
   // --- 7d stats ---
+  /** The percentage change in price over the last 7 days. */
   priceChange7d?: number | null; // Percentage
+  /** The average price over the last 7 days. */
   avgPrice?: number | null; // Dollars
+  /** The price history entries over the last 7 days. */
   priceHistory?: PriceHistoryEntry[] | null;
   minPrice7d?: number | null; // Dollars
   maxPrice7d?: number | null; // Dollars
@@ -152,13 +195,22 @@ export interface Variant {
  * Represents a single trading card, which contains one or more variants.
  */
 export interface Card {
+  /** The unique identifier for the card. */
   id: string;
+  /** The name of the card. */
   name: string;
+  /** The game this card belongs to. */
   game: string;
+  /** The set this card belongs to. */
   set: string;
+  /** The card number within the set. */
   number: string | null;
+  /** The rarity of the card. */
   rarity: string | null;
+  /** The TCGPlayer ID for the card. */
   tcgplayerId: string | null;
+  /** Additional details about the card. */
   details?: string | null;
+  /** The different variants of the card. */
   variants: Variant[];
 }
