@@ -92,7 +92,6 @@ The client is organized by API version, resource, and method. The structure is a
   - `.list()`: Fetches all supported games.
 - `client.v1.sets`
   - `.list(params)`: Fetches a paginated list of sets.
-  - `.fetchAll(params)`: (Helper) Fetches all sets for a game, handling pagination automatically.
 - `client.v1.cards`
   - `.get(params)`: Fetches cards with powerful search and filter parameters.
   - `.getByBatch(items)`: Fetches multiple specific cards in a single request.
