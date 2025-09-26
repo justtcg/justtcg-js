@@ -79,7 +79,7 @@ class RobustAPIClient {
 const apiClient = new RobustAPIClient();
 
 // Safe card lookup
-apiClient.getCardWithErrorHandling('pokemon-base-set-charizard');
+apiClient.getCardWithErrorHandling('pokemon-base-set-charizard-holo-rare');
 
 // Safe games list with fallback
 apiClient.getGamesWithFallback();
