@@ -6,9 +6,7 @@ class RobustAPIClient {
   private retryDelay: number = 1000;
 
   constructor() {
-    this.client = new JustTCG({
-        apiKey: "tcg_f20ebdbe22b44bb480b74c8308f4af77"
-    });
+    this.client = new JustTCG();
   }
 
   async safeApiCall<T>(apiCall: () => Promise<T>): Promise<T | null> {
