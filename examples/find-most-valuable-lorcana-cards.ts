@@ -9,7 +9,7 @@ async function findTopCards() {
     // const client = new JustTCG({ apiKey: 'your_api_key_here' }); // Or provide it directly
 
     const game = 'Disney Lorcana';
-    const set = 'The First Chapter';
+    const set = 'the-first-chapter-disney-lorcana';
 
     console.log(`Searching for the most valuable cards in ${game}: ${set}...`);
 

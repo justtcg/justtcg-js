@@ -42,8 +42,10 @@ export interface GetCardsParams extends QueryParams {
   query?: string;
   /** The name of the game (e.g., 'Pokemon'). */
   game?: string;
-  /** The name of the set (e.g., 'Base Set'). */
+  /** The id of the set (e.g., 'base-set-pokemon'). */
   set?: string;
+  /** The name of the set (e.g., 'Base Set'). */
+  set_name?: string;
   /** An array of card conditions to filter by (e.g., ['Near Mint', 'Lightly Played']). */
   condition?: string[];
   /** An array of card print types to filter by (e.g., ['Foil', '1st Edition']). */

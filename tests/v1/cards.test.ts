@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, Mocked } from 'vitest';
-import { JustTCG } from '../../src/index';
+import { GetCardsParams, JustTCG } from '../../src/index';
 import { HttpClient } from '../../src/core/http-client';
-import { BatchLookupItem, GetCardsParams, SearchCardsOptions } from '../../src/v1/resources/cards';
+import { BatchLookupItem, SearchCardsOptions } from '../../src/v1/resources/cards';
 
 // Mock the entire HttpClient module
 vi.mock('../../src/core/http-client');

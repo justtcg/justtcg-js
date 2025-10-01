@@ -24,7 +24,7 @@ export interface BatchLookupItem {
 export interface SearchCardsOptions {
   /** The name of the game to filter by (e.g., 'Pokemon'). */
   game?: string;
-  /** The name of the set to filter by (e.g., 'Base Set'). */
+  /** The id of the set to filter by (e.g., 'base-set-pokemon'). */
   set?: string;
   /** The maximum number of results to return. Default is 20. */
   limit?: number;
