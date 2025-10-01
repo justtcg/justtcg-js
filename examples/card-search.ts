@@ -8,7 +8,7 @@ import { JustTCG } from '../src';
 
 const SEARCH_QUERY = 'Eevee'; // The card name you want to search for.
 const GAME = 'Pokemon'; // Optional: The game to filter by (e.g., 'Pokemon', 'Disney Lorcana').
-const SET = undefined; // Optional: The specific set to filter by (e.g., 'The First Chapter').
+const SET = undefined; // Optional: The specific set Id to filter by (e.g., 'base-set-pokemon').
 const LIMIT = 5; // The maximum number of cards to return.
 
 /**

@@ -40,7 +40,7 @@ async function findTopCards() {
 
     const response = await client.v1.cards.get({
       game: 'Disney Lorcana',
-      set: 'The First Chapter',
+      set: 'the-first-chapter-disney-lorcana',
       orderBy: 'price',
       order: 'desc',
       limit: 10,
@@ -139,9 +139,9 @@ Fetches a list of all supported Trading Card Games.
 Fetches a list of sets, which **must be filtered by game**.
 
 -   Parameters:
-    | Parameter | Type | Required | Description |
-    | :--- | :--- | :--- | :--- |
-    | game | string | Yes | The name of the game to filter sets by (e.g., 'Pokemon'). |
+    | Parameter | Type   | Required | Description                                               |
+    | :-------- | :----- | :------- | :-------------------------------------------------------- |
+    | game      | string | Yes      | The name of the game to filter sets by (e.g., 'Pokemon'). |
     
 -   **Returns:** `Promise<JustTCGApiResponse<Set[]>>` (This response includes the `pagination` object).
     
@@ -162,19 +162,19 @@ Fetches a list of sets, which **must be filtered by game**.
 
 A powerful and flexible method to browse, filter, and retrieve a paginated list of cards.
 
- | Parameter | Type | Description | 
-  | :--- | :--- | :--- |  
-  | game | string | The name of the game to filter by (e.g., 'Pokemon'). |
-  | set | string | The name of the set to filter by (e.g., 'The First Chapter'). |
-  | condition | string[] | An array of conditions to filter by. (e.g., ['NM', 'LP']). Valid values: "NM", "LP", "MP", "HP", "D". |
-  | printing | string[] | An array of print types to filter by (e.g., ['Foil', '1st Edition']). |
-  | orderBy | 'price' \| '24h' \| '7d' \| '30d' \| '90d' | The field to sort the results by. Default is 'price'. |
-  | order | 'asc' \| 'desc' | The sort order. Default is 'desc'. |
-  | limit | number | The maximum number of results to return. Default is 20. <table><tr><th>Plan</th><th>Max</th></tr><tr><td>Free</td><td>20</td></tr><tr><td>Starter</td><td>100</td></tr><tr><td>Professional</td><td>100</td></tr><tr><td>Enterprise</td><td>200</td></tr></table>|
-  | offset | number | The number of results to skip for pagination. |
-  | tcgplayerId | string | A specific TCGplayer product ID to look up. |
-  | cardId | string | A specific JustTCG card ID to look up. |
-  | variantId | string | A specific JustTCG variant ID to look up. |
+ | Parameter   | Type                                       | Description                                                                                                                                                                                                                                                       |
+ | :---------- | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+ | game        | string                                     | The name of the game to filter by (e.g., 'Pokemon').                                                                                                                                                                                                              |
+ | set         | string                                     | The id of the set to filter by (e.g., 'the-first-chapter-disney-lorcana').                                                                                                                                                                                        |
+ | condition   | string[]                                   | An array of conditions to filter by. (e.g., ['NM', 'LP']). Valid values: "NM", "LP", "MP", "HP", "D".                                                                                                                                                             |
+ | printing    | string[]                                   | An array of print types to filter by (e.g., ['Foil', '1st Edition']).                                                                                                                                                                                             |
+ | orderBy     | 'price' \| '24h' \| '7d' \| '30d' \| '90d' | The field to sort the results by. Default is 'price'.                                                                                                                                                                                                             |
+ | order       | 'asc' \| 'desc'                            | The sort order. Default is 'desc'.                                                                                                                                                                                                                                |
+ | limit       | number                                     | The maximum number of results to return. Default is 20. <table><tr><th>Plan</th><th>Max</th></tr><tr><td>Free</td><td>20</td></tr><tr><td>Starter</td><td>100</td></tr><tr><td>Professional</td><td>100</td></tr><tr><td>Enterprise</td><td>200</td></tr></table> |
+ | offset      | number                                     | The number of results to skip for pagination.                                                                                                                                                                                                                     |
+ | tcgplayerId | string                                     | A specific TCGplayer product ID to look up.                                                                                                                                                                                                                       |
+ | cardId      | string                                     | A specific JustTCG card ID to look up.                                                                                                                                                                                                                            |
+ | variantId   | string                                     | A specific JustTCG variant ID to look up.                                                                                                                                                                                                                         |
     
 -   **Returns:** `Promise<JustTCGApiResponse<Card[]>>` (This response includes the `pagination` object).
 
@@ -184,9 +184,9 @@ Retrieves multiple specific cards and their variants in a single, efficient requ
 
 - Parameters: An array of `BatchLookupItem` objects.
     
-| Parameter | Type | Max Object Length| Description |
-| :--- | :--- | :---: | :--- |
-| items | BatchLookupItem[] | <table><tr><th>Plan</th><th>Max</th></tr><tr><td>Free</td><td>20</td></tr><tr><td>Starter</td><td>100</td></tr><tr><td>Professional</td><td>100</td></tr><tr><td>Enterprise</td><td>200</td></tr></table> | An array of lookup objects. |
+| Parameter | Type              |                                                                                             Max Object Length                                                                                             | Description                 |
+| :-------- | :---------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------------- |
+| items     | BatchLookupItem[] | <table><tr><th>Plan</th><th>Max</th></tr><tr><td>Free</td><td>20</td></tr><tr><td>Starter</td><td>100</td></tr><tr><td>Professional</td><td>100</td></tr><tr><td>Enterprise</td><td>200</td></tr></table> | An array of lookup objects. |
     
 **`BatchLookupItem` Object:**
 
@@ -215,8 +215,10 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
   name: string;
   /** The game this card belongs to. */
   game: string;
-  /** The set this card belongs to. */
+  /** The set ID this card belongs to. */
   set: string;
+  /** The set name this card belongs to. */
+  set_name: string;
   /** The card number within the set. */
   number: string | null;
   /** The rarity of the card. */
