@@ -203,8 +203,10 @@ export interface Card {
   name: string;
   /** The game this card belongs to. */
   game: string;
-  /** The set this card belongs to. */
+  /** The set ID this card belongs to. */
   set: string;
+  /** The set name this card belongs to. */
+  set_name?: string;
   /** The card number within the set. */
   number: string | null;
   /** The rarity of the card. */
