@@ -10,6 +10,11 @@ export class BaseResource {
   }
 
   protected async _get<T>(path: string, params?: QueryParams): Promise<T> {
+    // Parse 'query' parameter to the 'q' format expected by the API
+    if (params && 'query' in params && typeof params.query === 'string') {
+      params.q = params.query;
+      delete params.query;
+    }
     return this.httpClient.get<T>(`${this.pathPrefix}${path}`, params);
   }
 

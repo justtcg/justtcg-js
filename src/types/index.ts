@@ -28,6 +28,10 @@ export interface Set {
   gameId: string;
 }
 
+export type StatisticTimeFrame = '7d' | '30d' | '90d' | '1y' | 'allTime';
+export type Condition = 'Sealed' | 'Near Mint' | 'Lightly Played' | 'Moderately Played' | 'Heavily Played' | 'Damaged';
+export type ConditionAbv = 'S' | 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
+
 /**
  * Parameters for the GET /cards endpoint.
  */
@@ -47,7 +51,7 @@ export interface GetCardsParams extends QueryParams {
   /** The name of the set (e.g., 'Base Set'). */
   set_name?: string;
   /** An array of card conditions to filter by (e.g., ['Near Mint', 'Lightly Played']). */
-  condition?: string[];
+  condition?: (Condition | ConditionAbv)[];
   /** An array of card print types to filter by (e.g., ['Foil', '1st Edition']). */
   printing?: string[];
   /** The maximum number of results to return. Default is 20. */
@@ -58,6 +62,52 @@ export interface GetCardsParams extends QueryParams {
   order?: 'asc' | 'desc';
   /** The field to order the results by. Default is 'price'. */
   orderBy?: 'price' | '24h' | '7d' | '30d' | '90d';
+  /** Option to include price history in the response. */
+  include_price_history?: boolean;
+  /** Option to include specific timeframes for the price statistics. */
+  include_statistics?: StatisticTimeFrame[];
+}
+
+/**
+ * Describes a single item for a batch lookup request.
+ */
+export interface BatchLookupItem {
+  /** A TCGplayer product ID. */
+  tcgplayerId?: string;
+  /** A JustTCG card ID. */
+  cardId?: string;
+  /** A JustTCG variant ID. */
+  variantId?: string;
+  /** An array of card print types to filter by. */
+  printing?: string[];
+  /** An array of card conditions to filter by. */
+  condition?: (Condition | ConditionAbv)[];
+  /** Option to include price history in the response. */
+  include_price_history?: boolean;
+  /** Option to include specific timeframes for the price statistics. */
+  include_statistics?: StatisticTimeFrame[];
+}
+
+/**
+ * Optional parameters for the `search` method.
+ */
+export interface SearchCardsOptions {
+  /** The name of the game to filter by (e.g., 'Pokemon'). */
+  game?: string;
+  /** The id of the set to filter by (e.g., 'base-set-pokemon'). */
+  set?: string;
+  /** The maximum number of results to return. Default is 20. */
+  limit?: number;
+  /** The number of results to skip for pagination. */
+  offset?: number;
+  /** An array of card print types to filter by. */
+  printing?: string[];
+  /** An array of card conditions to filter by. */
+  condition?: (Condition | ConditionAbv)[];
+  /** Option to include price history in the response. */
+  include_price_history?: boolean;
+  /** Option to include specific timeframes for the price statistics. */
+  include_statistics?: StatisticTimeFrame[];
 }
 
 /**
@@ -130,7 +180,7 @@ export interface Variant {
   /** The unique identifier for this variant. */
   id: string;
   /** The condition of the card variant (e.g., Near Mint). */
-  condition: string;
+  condition: Condition;
   /** The printing type of the card variant (e.g., Foil, 1st Edition). */
   printing: string;
   /** The language of the card variant, if applicable. */

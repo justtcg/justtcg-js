@@ -1,4 +1,4 @@
-import { JustTCG } from '../src';
+import { JustTCG, SearchCardsOptions } from '../src';
 
 /**
  * ==================================================================
@@ -9,7 +9,7 @@ import { JustTCG } from '../src';
 const SEARCH_QUERY = 'Eevee'; // The card name you want to search for.
 const GAME = 'Pokemon'; // Optional: The game to filter by (e.g., 'Pokemon', 'Disney Lorcana').
 const SET = undefined; // Optional: The specific set Id to filter by (e.g., 'base-set-pokemon').
-const LIMIT = 5; // The maximum number of cards to return.
+const LIMIT = 20; // The maximum number of cards to return.
 
 /**
  * ==================================================================
@@ -29,10 +29,13 @@ async function dynamicSearch() {
 
     // The search options are built dynamically from the constants above.
     // Undefined values will be ignored by the SDK.
-    const searchOptions = {
+    const searchOptions: SearchCardsOptions = {
       game: GAME,
       set: SET,
       limit: LIMIT,
+      condition: ['NM', 'LP', 'HP', 'MP', "DMG"], // Exclude sealed products
+      include_price_history: false,
+      include_statistics: ['7d']
     };
 
     const response = await client.v1.cards.search(SEARCH_QUERY, searchOptions);
@@ -48,7 +51,7 @@ async function dynamicSearch() {
 
     for (const card of response.data) {
       const price = card.variants[0]?.price?.toFixed(2) ?? 'N/A';
-      console.log(`- ${card.name} | Set: ${card.set} | Game: ${card.game} | Price: $${price}`);
+      console.log(`- ${card.name} | ${card.variants[0]?.condition} | Set: ${card.set_name} | Game: ${card.game} | Price: $${price}`);
     }
 
     console.log(`\nAPI requests remaining: ${response.usage.apiRequestsRemaining}`);

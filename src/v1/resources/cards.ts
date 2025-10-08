@@ -1,36 +1,6 @@
 import { handleResponse } from '../../core/response-handler';
-import { Card, GetCardsParams, JustTCGApiResponse, PaginationMeta, UsageMeta } from '../../types';
+import { BatchLookupItem, Card, GetCardsParams, JustTCGApiResponse, PaginationMeta, SearchCardsOptions, UsageMeta } from '../../types';
 import { BaseResource } from './base';
-
-/**
- * Describes a single item for a batch lookup request.
- */
-export interface BatchLookupItem {
-  /** A TCGplayer product ID. */
-  tcgplayerId?: string;
-  /** A JustTCG card ID. */
-  cardId?: string;
-  /** A JustTCG variant ID. */
-  variantId?: string;
-  /** An array of card print types to filter by. */
-  printing?: string[];
-  /** An array of card conditions to filter by. */
-  condition?: string[];
-}
-
-/**
- * Optional parameters for the `search` method.
- */
-export interface SearchCardsOptions {
-  /** The name of the game to filter by (e.g., 'Pokemon'). */
-  game?: string;
-  /** The id of the set to filter by (e.g., 'base-set-pokemon'). */
-  set?: string;
-  /** The maximum number of results to return. Default is 20. */
-  limit?: number;
-  /** The number of results to skip for pagination. */
-  offset?: number;
-}
 
 interface RawCardsApiResponse {
   data: Card[];
