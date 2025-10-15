@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, Mocked } from 'vitest';
-import { GetCardsParams, JustTCG } from '../../src/index';
+import { BatchLookupItem, GetCardsParams, JustTCG, SearchCardsOptions } from '../../src/index';
 import { HttpClient } from '../../src/core/http-client';
-import { BatchLookupItem, SearchCardsOptions } from '../../src/v1/resources/cards';
 
 // Mock the entire HttpClient module
 vi.mock('../../src/core/http-client');
@@ -19,7 +18,7 @@ describe('CardsResource', () => {
   describe('get', () => {
     it('should fetch cards with query parameters', async () => {
       // Arrange
-      const params: GetCardsParams = { query: 'Charizard', limit: 10 };
+      const params: GetCardsParams = { q: 'Charizard', limit: 10 };
       const mockRawResponse = {
         data: [{ id: 'card-1', name: 'Charizard', game: 'pokemon', set: 'Base Set', variants: [] }],
         meta: { total: 1, limit: 10, offset: 0, hasMore: false },
@@ -89,7 +88,7 @@ describe('CardsResource', () => {
       await client.v1.cards.search(query);
 
       expect(getSpy).toHaveBeenCalledOnce();
-      expect(getSpy).toHaveBeenCalledWith({ query });
+      expect(getSpy).toHaveBeenCalledWith({ q:query });
     });
 
     it('should call the get method with the query and additional options', async () => {
@@ -101,7 +100,7 @@ describe('CardsResource', () => {
       await client.v1.cards.search(query, options);
 
       expect(getSpy).toHaveBeenCalledOnce();
-      expect(getSpy).toHaveBeenCalledWith({ query, ...options });
+      expect(getSpy).toHaveBeenCalledWith({ q: query, ...options });
     });
   });
 });
