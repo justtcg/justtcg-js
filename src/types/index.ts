@@ -26,6 +26,8 @@ export interface Set {
   count: number;
   /** The id of the game this set belongs to. */
   gameId: string;
+  /** The release date of this set in ISO 8601 format. */
+  release_date: string;
 }
 
 export type StatisticTimeFrame = '7d' | '30d' | '90d' | '1y' | 'allTime';
@@ -38,10 +40,16 @@ export type ConditionAbv = 'S' | 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
 export interface GetCardsParams extends QueryParams {
   /** A TCGplayer product ID. */
   tcgplayerId?: string;
+  /** The TCGPlayer SKU of the specific variant. */
+  tcgplayerSkuId?: string;
   /** A JustTCG card ID. */
   cardId?: string;
   /** A JustTCG variant ID. */
   variantId?: string;
+  /** The Scryfall ID of the card. */
+  scryfallId?: string;
+  /** The MTGJSON ID of the card. */
+  mtgjsonId?: string;
   /** A general search query for the card's name. */
   query?: string;
   /** The name of the game (e.g., 'Pokemon'). */
@@ -74,10 +82,16 @@ export interface GetCardsParams extends QueryParams {
 export interface BatchLookupItem {
   /** A TCGplayer product ID. */
   tcgplayerId?: string;
+  /** The TCGPlayer SKU of the specific variant. */
+  tcgplayerSkuId?: string;
   /** A JustTCG card ID. */
   cardId?: string;
   /** A JustTCG variant ID. */
   variantId?: string;
+  /** The Scryfall ID of the card. */
+  scryfallId?: string;
+  /** The MTGJSON ID of the card. */
+  mtgjsonId?: string;
   /** An array of card print types to filter by. */
   printing?: string[];
   /** An array of card conditions to filter by. */
@@ -185,6 +199,8 @@ export interface Variant {
   printing: string;
   /** The language of the card variant, if applicable. */
   language: string | null;
+  /** The TCGPlayer SKU of the specific variant. */
+  tcgplayerSkuId?: string;
   /** The current price of the card variant in dollars. */
   price: number;
   /** The last time the price was updated, as an epoch timestamp in seconds. */
@@ -263,6 +279,10 @@ export interface Card {
   rarity: string | null;
   /** The TCGPlayer ID for the card. */
   tcgplayerId: string | null;
+  /** The Scryfall ID for the card. */
+  scryfallId: string | null;
+  /** The MTGJSON ID for the card. */
+  mtgjsonId: string | null;
   /** Additional details about the card. */
   details?: string | null;
   /** The different variants of the card. */

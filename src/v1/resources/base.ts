@@ -1,4 +1,5 @@
 import { HttpClient, QueryParams } from '../../core/http-client';
+import { BatchLookupItem } from '../../types';
 
 export class BaseResource {
   protected httpClient: HttpClient;
@@ -18,7 +19,7 @@ export class BaseResource {
     return this.httpClient.get<T>(`${this.pathPrefix}${path}`, params);
   }
 
-  protected async _post<T>(path: string, body: unknown): Promise<T> {
+  protected async _post<T>(path: string, body: BatchLookupItem[]): Promise<T> {
     return this.httpClient.post<T>(`${this.pathPrefix}${path}`, body);
   }
 }

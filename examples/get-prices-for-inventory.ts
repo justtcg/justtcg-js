@@ -1,4 +1,4 @@
-import { JustTCG } from '../src';
+import { ConditionAbv, JustTCG } from '../src';
 
 /**
  * This script demonstrates how to fetch the latest prices for a list of
@@ -12,9 +12,12 @@ async function updateInventoryPrices() {
     // Imagine this is your store's inventory. You can look up items
     // using different identifiers in the same request.
     const inventoryItems = [
-      { tcgplayerId: '89163' }, // Shining Charizard
+      { tcgplayerId: '89163', condition: ['NM'] as ConditionAbv[] }, // Shining Charizard
       { cardId: 'pokemon-japan-s10b-pokemon-go-metal-energy-mirror-holofoil' },
       { variantId: 'magic-the-gathering-collector-s-edition-black-lotus-ce-rare_near-mint' },
+      { tcgplayerSkuId: '8695915' },
+      { scryfallId: 'f150d6e9-3da6-4655-9c63-dd34525d08a1' },
+      { mtgjsonId: 'aaef9ad6-eb1a-5195-b6af-64de9659f881', condition: ['NM'] as ConditionAbv[] }
     ];
 
     console.log(`Fetching prices for ${inventoryItems.length} inventory items...`);

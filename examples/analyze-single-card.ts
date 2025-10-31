@@ -1,4 +1,4 @@
-import { JustTCG } from '../src';
+import { ConditionAbv, JustTCG } from '../src';
 
 /**
  * This script demonstrates how to do a deep-dive on a single card,
@@ -11,10 +11,12 @@ async function analyzeCard() {
 
     // TCGplayer ID for "Shining Charizard"
     const tcgplayerId = '89163';
+    const condition = ['NM', 'LP'] as ConditionAbv[]; // Include Near Mint and Lightly Played conditions only
+    const printing = ["Unlimited Holofoil"];
 
     console.log(`Fetching detailed data for TCGplayer ID: ${tcgplayerId}...`);
 
-    const response = await client.v1.cards.get({ tcgplayerId });
+    const response = await client.v1.cards.get({ tcgplayerId, condition, printing });
 
     if (response.data.length === 0) {
       console.log('Card not found.');
