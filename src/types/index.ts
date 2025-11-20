@@ -12,6 +12,8 @@ export interface Game {
   cards_count: number;
   /** The total number of sets in this game. */
   sets_count: number;
+  /** The last updated timestamp for this game in Unix timestamp format (seconds since epoch). */
+  last_updated: number;
 }
 
 /**
@@ -58,6 +60,8 @@ export interface GetCardsParams extends QueryParams {
   set?: string;
   /** The name of the set (e.g., 'Base Set'). */
   set_name?: string;
+  /** Updated after a specific date in Unix timestamp format (seconds since epoch). */
+  updated_after?: number;
   /** An array of card conditions to filter by (e.g., ['Near Mint', 'Lightly Played']). */
   condition?: (Condition | ConditionAbv)[];
   /** An array of card print types to filter by (e.g., ['Foil', '1st Edition']). */
@@ -92,6 +96,8 @@ export interface BatchLookupItem {
   scryfallId?: string;
   /** The MTGJSON ID of the card. */
   mtgjsonId?: string;
+  /** Updated after a specific date in Unix timestamp format (seconds since epoch). */
+  updated_after?: number;
   /** An array of card print types to filter by. */
   printing?: string[];
   /** An array of card conditions to filter by. */

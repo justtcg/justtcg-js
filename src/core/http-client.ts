@@ -22,6 +22,8 @@ interface BatchLookupItemStringified {
     scryfallId?: string;
     /** The MTGJSON ID of the card. */
     mtgjsonId?: string;
+    /** Filer by Updated after a specific date in Unix timestamp format (seconds since epoch). */
+    updated_after?: string;
     /** An array of card print types to filter by. */
     printing?: string;
     /** An array of card conditions to filter by. */
@@ -95,6 +97,7 @@ export class HttpClient {
       if (item.condition) stringifiedItem.condition = Array.isArray(item.condition) ? item.condition.join(',') : item.condition;
       if (item.include_price_history !== undefined) stringifiedItem.include_price_history = String(item.include_price_history);
       if (item.include_statistics) stringifiedItem.include_statistics = Array.isArray(item.include_statistics) ? item.include_statistics.join(',') : item.include_statistics;
+      if (item.updated_after !== undefined) stringifiedItem.updated_after = String(item.updated_after);
       return stringifiedItem;
     });
 
