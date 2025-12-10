@@ -12,6 +12,8 @@ export interface Game {
   cards_count: number;
   /** The total number of sets in this game. */
   sets_count: number;
+  /** The total number of sealed products in this game. */
+  sealed_count: number;
   /** The last updated timestamp for this game in Unix timestamp format (seconds since epoch). */
   last_updated: number;
 }
@@ -24,10 +26,16 @@ export interface Set {
   id: string;
   /** The name of this set. */
   name: string;
-  /** The number of cards in this set. */
-  count: number;
   /** The id of the game this set belongs to. */
   gameId: string;
+  /** The name of the game this set belongs to. */
+  game: string;
+  /** The total number of cards in this set. */
+  count: number;
+  /** The total number of variants in this set. */
+  variants_count: number;
+  /** The total number of sealed products in this set. */
+  sealed_count: number;
   /** The release date of this set in ISO 8601 format. */
   release_date: string;
 }
@@ -58,8 +66,8 @@ export interface GetCardsParams extends QueryParams {
   game?: string;
   /** The id of the set (e.g., 'base-set-pokemon'). */
   set?: string;
-  /** The name of the set (e.g., 'Base Set'). */
-  set_name?: string;
+  /** The number of the card (e.g. 015'). */
+  number?: string;
   /** Updated after a specific date in Unix timestamp format (seconds since epoch). */
   updated_after?: number;
   /** An array of card conditions to filter by (e.g., ['Near Mint', 'Lightly Played']). */
@@ -78,6 +86,8 @@ export interface GetCardsParams extends QueryParams {
   include_price_history?: boolean;
   /** Option to include specific timeframes for the price statistics. */
   include_statistics?: StatisticTimeFrame[];
+  /** Option to include cards who have null prices. */
+  include_null_prices?: boolean;
 }
 
 /**
@@ -116,6 +126,8 @@ export interface SearchCardsOptions {
   game?: string;
   /** The id of the set to filter by (e.g., 'base-set-pokemon'). */
   set?: string;
+  /** The card number to filter by (e.g., '015'). */
+  number?: string;
   /** The maximum number of results to return. Default is 20. */
   limit?: number;
   /** The number of results to skip for pagination. */
@@ -128,6 +140,8 @@ export interface SearchCardsOptions {
   include_price_history?: boolean;
   /** Option to include specific timeframes for the price statistics. */
   include_statistics?: StatisticTimeFrame[];
+  /** Option to include cards who have null prices. */
+  include_null_prices?: boolean;
 }
 
 /**
