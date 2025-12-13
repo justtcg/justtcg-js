@@ -16,6 +16,38 @@ export interface Game {
   sealed_count: number;
   /** The last updated timestamp for this game in Unix timestamp format (seconds since epoch). */
   last_updated: number;
+  /** Total value of all cards in the game, in USD. Takes the highest price of any variant for each card. */
+  game_value_usd: number;
+  /** Percentage change in game value over the last 7 days. */
+  game_value_change_7d_pct: number;
+  /** Percentage change in game value over the last 30 days. */
+  game_value_change_30d_pct: number;
+  /** Percentage change in game value over the last 90 days. */
+  game_value_change_90d_pct: number;
+  /** Number of cards with positive price change in the last 7 days. */
+  cards_pos_7d_count: number;
+  /** Number of cards with negative price change in the last 7 days. */
+  cards_neg_7d_count: number;
+  /** Number of sealed products with positive price change in the last 7 days. */
+  sealed_cards_pos_7d_count: number;
+  /** Number of sealed products with negative price change in the last 7 days. */
+  sealed_cards_neg_7d_count: number;
+  /** Number of cards with positive price change in the last 30 days. */
+  cards_pos_30d_count: number;
+  /** Number of cards with negative price change in the last 30 days. */
+  cards_neg_30d_count: number;
+  /** Number of sealed products with positive price change in the last 30 days. */
+  sealed_cards_pos_30d_count: number;
+  /** Number of sealed products with negative price change in the last 30 days. */
+  sealed_cards_neg_30d_count: number;
+  /** Number of cards with positive price change in the last 90 days. */
+  cards_pos_90d_count: number;
+  /** Number of cards with negative price change in the last 90 days. */
+  cards_neg_90d_count: number;
+  /** Number of sealed products with positive price change in the last 90 days. */
+  sealed_cards_pos_90d_count: number;
+  /** Number of sealed products with negative price change in the last 90 days. */
+  sealed_cards_neg_90d_count: number;
 }
 
 /**
@@ -38,6 +70,14 @@ export interface Set {
   sealed_count: number;
   /** The release date of this set in ISO 8601 format. */
   release_date: string;
+  /** Total value of all cards in the set, in USD. Takes the highest price of any variant for each card. */
+  set_value_usd: number;
+  /** Percentage change in set value over the last 7 days. */
+  set_value_change_7d_pct: number;
+  /** Percentage change in set value over the last 30 days. */
+  set_value_change_30d_pct: number;
+  /** Percentage change in set value over the last 90 days. */
+  set_value_change_90d_pct: number;
 }
 
 export type StatisticTimeFrame = '7d' | '30d' | '90d' | '1y' | 'allTime';

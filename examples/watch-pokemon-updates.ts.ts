@@ -43,7 +43,6 @@
  *     $env:COMPACT_LOGS = 'false'; $env:POLL_INTERVAL_MS = '10000'; npx ts-node .\examples\watch-pokemon-updates.ts
  */
 import { JustTCG } from '../dist';
-import { Game } from '../src/types';
 import { logDebug, logCompact, logInfo, logWarn, logError } from './logging/logger';
 import { prettyDateFromEpochSeconds, waitWithCountdown } from './logging/utils';
 
@@ -112,7 +111,7 @@ async function fetchLastUpdatedTimestamp(): Promise<number | null> {
   }
 
   const pokemonGame = gamesResponse.data.find(
-    (game: Game) => game.name.toLowerCase() === 'pokemon',
+    (game) => game.name.toLowerCase() === 'pokemon',
   );
   if (!pokemonGame) {
     logError('Pokemon game not found in the games list.');
