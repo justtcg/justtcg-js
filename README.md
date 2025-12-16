@@ -128,6 +128,24 @@ Fetches a list of all supported Trading Card Games.
   name: string; // The full name of the game (e.g., 'Pokemon')
   cards_count: number; // Total number of cards in the game
   sets_count: number; // Total number of sets in the game
+  sealed_count: number; // Number of sealed products in the game
+  last_updated: number; // Last updated timestamp (Unix seconds)
+  game_value_usd: number; // Total value of the game's cards (USD)
+  game_value_change_7d_pct: number; // Percentage change in game value over 7 days
+  game_value_change_30d_pct: number; // Percentage change in game value over 30 days
+  game_value_change_90d_pct: number; // Percentage change in game value over 90 days
+  cards_pos_7d_count: number; // Number of cards with positive price change in 7d
+  cards_neg_7d_count: number; // Number of cards with negative price change in 7d
+  sealed_cards_pos_7d_count: number; // Number of sealed products with positive price change in 7d
+  sealed_cards_neg_7d_count: number; // Number of sealed products with negative price change in 7d
+  cards_pos_30d_count: number; // Number of cards with positive price change in 30d
+  cards_neg_30d_count: number; // Number of cards with negative price change in 30d
+  sealed_cards_pos_30d_count: number; // Number of sealed products with positive price change in 30d
+  sealed_cards_neg_30d_count: number; // Number of sealed products with negative price change in 30d
+  cards_pos_90d_count: number; // Number of cards with positive price change in 90d
+  cards_neg_90d_count: number; // Number of cards with negative price change in 90d
+  sealed_cards_pos_90d_count: number; // Number of sealed products with positive price change in 90d
+  sealed_cards_neg_90d_count: number; // Number of sealed products with negative price change in 90d
 }
 
 ```
@@ -151,8 +169,16 @@ Fetches a list of sets, which **must be filtered by game**.
 {
   id: string; // The unique identifier for the set
   name: string; // The name of the set (e.g., 'Base Set')
-  count: number; // The number of cards in the set
   gameId: string; // The ID of the game this set belongs to
+  game: string; // The name of the game this set belongs to
+  count: number; // The number of cards in the set
+  variants_count: number; // The total number of variants in the set
+  sealed_count: number; // The number of sealed products in the set
+  release_date: string; // The release date in ISO 8601 format
+  set_value_usd: number; // Total value of the set's cards (USD)
+  set_value_change_7d_pct: number; // Percentage change in set value over 7 days
+  set_value_change_30d_pct: number; // Percentage change in set value over 30 days
+  set_value_change_90d_pct: number; // Percentage change in set value over 90 days
 }
 ```
 
@@ -162,19 +188,28 @@ Fetches a list of sets, which **must be filtered by game**.
 
 A powerful and flexible method to browse, filter, and retrieve a paginated list of cards.
 
- | Parameter   | Type                                       | Description                                                                                                                                                                                                                                                       |
- | :---------- | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
- | game        | string                                     | The name of the game to filter by (e.g., 'Pokemon').                                                                                                                                                                                                              |
- | set         | string                                     | The id of the set to filter by (e.g., 'the-first-chapter-disney-lorcana').                                                                                                                                                                                        |
- | condition   | string[]                                   | An array of conditions to filter by. (e.g., ['NM', 'LP']). Valid values: "NM", "LP", "MP", "HP", "D".                                                                                                                                                             |
- | printing    | string[]                                   | An array of print types to filter by (e.g., ['Foil', '1st Edition']).                                                                                                                                                                                             |
- | orderBy     | 'price' \| '24h' \| '7d' \| '30d' \| '90d' | The field to sort the results by. Default is 'price'.                                                                                                                                                                                                             |
- | order       | 'asc' \| 'desc'                            | The sort order. Default is 'desc'.                                                                                                                                                                                                                                |
- | limit       | number                                     | The maximum number of results to return. Default is 20. <table><tr><th>Plan</th><th>Max</th></tr><tr><td>Free</td><td>20</td></tr><tr><td>Starter</td><td>100</td></tr><tr><td>Professional</td><td>100</td></tr><tr><td>Enterprise</td><td>200</td></tr></table> |
- | offset      | number                                     | The number of results to skip for pagination.                                                                                                                                                                                                                     |
- | tcgplayerId | string                                     | A specific TCGplayer product ID to look up.                                                                                                                                                                                                                       |
- | cardId      | string                                     | A specific JustTCG card ID to look up.                                                                                                                                                                                                                            |
- | variantId   | string                                     | A specific JustTCG variant ID to look up.                                                                                                                                                                                                                         |
+ | Parameter             | Type                                        | Description                                                                                                                                                                                                                                                       |
+ | :-------------------- | :------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+ | tcgplayerId           | string                                      | A TCGplayer product ID to look up.                                                                                                                                                                                                                                |
+ | tcgplayerSkuId        | string                                      | The TCGplayer SKU ID for a specific variant.                                                                                                                                                                                                                      |
+ | cardId                | string                                      | A JustTCG card ID to look up.                                                                                                                                                                                                                                     |
+ | variantId             | string                                      | A JustTCG variant ID to look up.                                                                                                                                                                                                                                  |
+ | scryfallId            | string                                      | The Scryfall ID for the card (if applicable).                                                                                                                                                                                                                     |
+ | mtgjsonId             | string                                      | The MTGJSON ID for the card (if applicable).                                                                                                                                                                                                                      |
+ | query                 | string                                      | A general search query for the card name.                                                                                                                                                                                                                         |
+ | game                  | string                                      | The name of the game to filter by (e.g., 'Pokemon').                                                                                                                                                                                                              |
+ | set                   | string                                      | The id of the set to filter by (e.g., 'the-first-chapter-disney-lorcana').                                                                                                                                                                                        |
+ | number                | string                                      | The number of the card within the set (e.g., '015').                                                                                                                                                                                                              |
+ | updated_after         | number                                      | Unix timestamp (seconds) to filter results updated after this time.                                                                                                                                                                                               |
+ | condition             | string[]                                    | An array of conditions to filter by. Supports fully spelled names or abbreviations. Full names: "Sealed", "Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged". Abbreviations: "S", "NM", "LP", "MP", "HP", "DMG".                     |
+ | printing              | string[]                                    | An array of print types to filter by (e.g., ['Foil', '1st Edition']).                                                                                                                                                                                             |
+ | include_price_history | boolean                                     | Option to include price history in the response for matching variants.                                                                                                                                                                                            |
+ | include_statistics    | '7d' \| '30d' \| '90d' \| '1y' \| 'allTime' | Specify which timeframe statistics to include in the response. Defaults to all timeframes. You can provide a comma-separated list (e.g., 7d,30d,1y) to include multiple statistics.                                                                               | '90d' | '1y' | 'allTime'[] | Option to include specific timeframes for price statistics (e.g., ['7d','30d']). |
+ | include_null_prices   | boolean                                     | Option to include cards that currently have null prices. Defaults to 'false'.                                                                                                                                                                                     |
+ | orderBy               | 'price' \| '24h' \| '7d' \| '30d' \| '90d'  | The field to sort the results by. Default is 'price'.                                                                                                                                                                                                             |
+ | order                 | 'asc' \| 'desc'                             | The sort order. Default is 'desc'.                                                                                                                                                                                                                                |
+ | limit                 | number                                      | The maximum number of results to return. Default is 20. <table><tr><th>Plan</th><th>Max</th></tr><tr><td>Free</td><td>20</td></tr><tr><td>Starter</td><td>100</td></tr><tr><td>Professional</td><td>100</td></tr><tr><td>Enterprise</td><td>200</td></tr></table> |
+ | offset                | number                                      | The number of results to skip for pagination.                                                                                                                                                                                                                     |
     
 -   **Returns:** `Promise<JustTCGApiResponse<Card[]>>` (This response includes the `pagination` object).
 
@@ -190,16 +225,22 @@ Retrieves multiple specific cards and their variants in a single, efficient requ
     
 **`BatchLookupItem` Object:**
 
-You can mix and match different identifier types in a single batch request. The lookup item must define one of the following values: `cardId`, `variantId`, or `tcgplayerId`.
+You can mix and match different identifier types in a single batch request. The lookup item can define any combination of identifiers and options.
 ```typescript
 {
+  tcgplayerId?: string; // A TCGplayer product ID.
+  tcgplayerSkuId?: string; // The TCGplayer SKU ID for a specific variant.
   cardId?: string;      // A JustTCG card ID.
   variantId?: string;   // A JustTCG variant ID.
-  tcgplayerId?: string; // A TCGplayer product ID.
+  scryfallId?: string;  // The Scryfall ID for the card.
+  mtgjsonId?: string;   // The MTGJSON ID for the card.
   printing?: string[];  // Optional: Filter by specific print types for this item.
-  condition?: string[]; // Optional: Filter by specific conditions for this item.
+  condition?: string[]; // Optional: Filter by specific conditions for this item. Accepts full names and abbreviations.
+  updated_after?: number; // Optional: Only return items updated after this Unix timestamp (seconds).
+  include_price_history?: boolean; // Optional: Include price history for matched variants.
+  include_statistics?: ('7d'|'30d'|'90d'|'1y'|'allTime')[]; // Optional: Specific timeframes for statistics.
 }
-```
+``````
 -   **Returns:** `Promise<JustTCGApiResponse<Card[]>>` (This response does **not** include the `pagination` object).
 
 #### **Response `data` Object (`Card` and `Variant`)**
@@ -217,14 +258,18 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
   game: string;
   /** The set ID this card belongs to. */
   set: string;
-  /** The set name this card belongs to. */
-  set_name: string;
+  /** The set name this card belongs to (may be omitted for some responses). */
+  set_name?: string;
   /** The card number within the set. */
   number: string | null;
   /** The rarity of the card. */
   rarity: string | null;
   /** The TCGPlayer ID for the card. */
   tcgplayerId: string | null;
+  /** The Scryfall ID for the card, if applicable. */
+  scryfallId: string | null;
+  /** The MTGJSON ID for the card, if applicable. */
+  mtgjsonId: string | null;
   /** Additional details about the card. */
   details?: string | null;
   /** The different variants of the card. */
@@ -242,6 +287,8 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
   printing: string;
   /** The language of the card variant, if applicable. */
   language: string | null;
+  /** The TCGPlayer SKU of the specific variant, if available. */
+  tcgplayerSkuId?: string;
   /** The current price of the card variant in dollars. */
   price: number;
   /** The last time the price was updated, as an epoch timestamp in seconds. */
@@ -300,6 +347,7 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
   maxPriceAllTimeDate?: string | null;
 }
 ```
+
 **`PriceHistoryEntry` Object:**
 ```typescript
 {
