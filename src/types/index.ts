@@ -83,6 +83,9 @@ export interface Set {
 export type StatisticTimeFrame = '7d' | '30d' | '90d' | '1y' | 'allTime';
 export type Condition = 'Sealed' | 'Near Mint' | 'Lightly Played' | 'Moderately Played' | 'Heavily Played' | 'Damaged';
 export type ConditionAbv = 'S' | 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
+export type Order = 'asc' | 'desc';
+export type OrderBy = 'price' | '24h' | '7d' | '30d' | '90d';
+export type PriceHistoryDuration = '7d' | '30d' | '90d' | '180d';
 
 /**
  * Parameters for the GET /cards endpoint.
@@ -119,11 +122,13 @@ export interface GetCardsParams extends QueryParams {
   /** The number of results to skip for pagination. */
   offset?: number;
   /** The order to sort the results by. Can be 'asc' or 'desc'. Default is 'desc'. */
-  order?: 'asc' | 'desc';
+  order?: Order;
   /** The field to order the results by. Default is 'price'. */
-  orderBy?: 'price' | '24h' | '7d' | '30d' | '90d';
+  orderBy?: OrderBy;
   /** Option to include price history in the response. */
   include_price_history?: boolean;
+  /** Specify the duration of price history to include. Options are 7d, 30d, 90d, or 180d. This is ignored if include_price_history is set to false.*/
+  priceHistoryDuration?: PriceHistoryDuration;
   /** Option to include specific timeframes for the price statistics. */
   include_statistics?: StatisticTimeFrame[];
   /** Option to include cards who have null prices. */
@@ -178,6 +183,8 @@ export interface SearchCardsOptions {
   condition?: (Condition | ConditionAbv)[];
   /** Option to include price history in the response. */
   include_price_history?: boolean;
+  /** Specify the duration of price history to include. Options are 7d, 30d, 90d, or 180d. This is ignored if include_price_history is set to false. */
+  priceHistoryDuration?: PriceHistoryDuration;
   /** Option to include specific timeframes for the price statistics. */
   include_statistics?: StatisticTimeFrame[];
   /** Option to include cards who have null prices. */
