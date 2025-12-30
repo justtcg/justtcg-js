@@ -204,6 +204,7 @@ A powerful and flexible method to browse, filter, and retrieve a paginated list 
  | condition             | string[]                                    | An array of conditions to filter by. Supports fully spelled names or abbreviations. Full names: "Sealed", "Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged". Abbreviations: "S", "NM", "LP", "MP", "HP", "DMG".                     |
  | printing              | string[]                                    | An array of print types to filter by (e.g., ['Foil', '1st Edition']).                                                                                                                                                                                             |
  | include_price_history | boolean                                     | Option to include price history in the response for matching variants.                                                                                                                                                                                            |
+ | priceHistoryDuration  | '7d' \| '30d' \| '90d' \| '180d'            | Specify which timeframe to include in the priceHistory array. This parameter is ignored if include_price_history is set to false.                                                                                                                                 |
  | include_statistics    | '7d' \| '30d' \| '90d' \| '1y' \| 'allTime' | Specify which timeframe statistics to include in the response. Defaults to all timeframes. You can provide a comma-separated list (e.g., 7d,30d,1y) to include multiple statistics.                                                                               | '90d' | '1y' | 'allTime'[] | Option to include specific timeframes for price statistics (e.g., ['7d','30d']). |
  | include_null_prices   | boolean                                     | Option to include cards that currently have null prices. Defaults to 'false'.                                                                                                                                                                                     |
  | orderBy               | 'price' \| '24h' \| '7d' \| '30d' \| '90d'  | The field to sort the results by. Default is 'price'.                                                                                                                                                                                                             |
@@ -316,7 +317,10 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
   avgPrice30d?: number | null; // Dollars
   minPrice30d?: number | null; // Dollars
   maxPrice30d?: number | null; // Dollars
+
+  /** DEPRECATED: Use the generic 'priceHistory' field with 'priceHistoryDuration=30d' instead. */
   priceHistory30d?: PriceHistoryEntry[] | null;
+
   stddevPopPrice30d?: number | null;
   covPrice30d?: number | null;
   iqrPrice30d?: number | null;

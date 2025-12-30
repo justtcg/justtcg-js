@@ -295,6 +295,10 @@ export interface Variant {
   avgPrice30d?: number | null; // Dollars
   minPrice30d?: number | null; // Dollars
   maxPrice30d?: number | null; // Dollars
+  /**
+   * @deprecated This field is deprecated and will be removed in a future version.
+   * Please use the generic 'priceHistory' field combined with the 'priceHistoryDuration' parameter set to '30d'.
+   */
   priceHistory30d?: PriceHistoryEntry[] | null;
   stddevPopPrice30d?: number | null;
   covPrice30d?: number | null;
