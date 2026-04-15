@@ -59,7 +59,7 @@ export interface Set {
   /** The name of this set. */
   name: string;
   /** The id of the game this set belongs to. */
-  gameId: string;
+  game_id: string;
   /** The name of the game this set belongs to. */
   game: string;
   /** The total number of cards in this set. */
