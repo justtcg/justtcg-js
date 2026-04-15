@@ -40,6 +40,22 @@ describe('CardsResource', () => {
       expect(result.data[0].name).toBe('Charizard');
       expect(result.pagination?.limit).toBe(10);
     });
+
+    it('should support the min_price parameter', async () => {
+      // Arrange
+      const params: GetCardsParams = { min_price: 5.0 };
+      const mockRawResponse = {
+        data: [{ id: 'card-expensive', name: 'Expensive Card', game: 'pokemon', set: 'Collector Set', variants: [{ id: 'v1', price: 10.0 }] }],
+        _metadata: { apiPlan: 'Free Tier' },
+      };
+      mockedHttpClient.get.mockResolvedValue(mockRawResponse);
+
+      // Act
+      await client.v1.cards.get(params);
+
+      // Assert
+      expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/cards', params);
+    });
   });
 
   describe('getByBatch', () => {

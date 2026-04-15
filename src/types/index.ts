@@ -133,6 +133,8 @@ export interface GetCardsParams extends QueryParams {
   include_statistics?: StatisticTimeFrame[];
   /** Option to include cards who have null prices. */
   include_null_prices?: boolean;
+  /** Filters results to include only cards where the current market price is greater than or equal to the provided value. */
+  min_price?: number;
 }
 
 /**
@@ -189,6 +191,8 @@ export interface SearchCardsOptions {
   include_statistics?: StatisticTimeFrame[];
   /** Option to include cards who have null prices. */
   include_null_prices?: boolean;
+  /** Filters results to include only cards where the current market price is greater than or equal to the provided value. */
+  min_price?: number;
 }
 
 /**
