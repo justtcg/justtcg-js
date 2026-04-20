@@ -33,8 +33,11 @@ async function findTopCards() {
     // The client automatically looks for the JUSTTCG_API_KEY environment variable
     const client = new JustTCG();
 
-    // Or, you can provide the key directly in the constructor
-    // const client = new JustTCG({ apiKey: 'your_api_key_here' });
+    // Or, you can provide options directly in the constructor
+    // const client = new JustTCG({ 
+    //   apiKey: 'your_api_key_here',
+    //   debug: true // Enable request logging
+    // });
 
     console.log(`Searching for the most valuable cards in Disney Lorcana: The First Chapter...`);
 

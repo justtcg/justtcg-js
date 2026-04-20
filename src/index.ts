@@ -9,6 +9,10 @@ export interface JustTCGConfig {
    * If not provided, the client will look for the `JUSTTCG_API_KEY` environment variable.
    */
   apiKey?: string;
+  /**
+   * Enable debug mode to log request details.
+   */
+  debug?: boolean;
 }
 
 export class JustTCG {
@@ -31,6 +35,7 @@ export class JustTCG {
     this.httpClient = new HttpClient({
       apiKey: apiKey,
       baseUrl: API_BASE_URL,
+      debug: config.debug ?? false,
     });
 
     // Pass the httpClient instance to the V1Client

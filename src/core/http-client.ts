@@ -3,6 +3,7 @@ import { BatchLookupItem } from "../types";
 export interface HttpClientConfig {
   apiKey: string;
   baseUrl: string;
+  debug?: boolean;
 }
 
 export interface QueryParams {
@@ -37,10 +38,12 @@ interface BatchLookupItemStringified {
 export class HttpClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
+  private readonly debug: boolean;
 
   constructor(config: HttpClientConfig) {
     this.apiKey = config.apiKey;
     this.baseUrl = config.baseUrl;
+    this.debug = config.debug ?? false;
   }
 
   /**
@@ -101,7 +104,9 @@ export class HttpClient {
       return stringifiedItem;
     });
 
-    console.log(stringifiedBody);
+      if (this.debug) {
+        console.log(stringifiedBody);
+      }
     const response = await fetch(url.toString(), {
       method: 'POST',
       headers: this.getHeaders(),
