@@ -195,8 +195,8 @@ A powerful and flexible method to browse, filter, and retrieve a paginated list 
  | :-------------------- | :------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
  | tcgplayerId           | string                                      | A TCGplayer product ID to look up.                                                                                                                                                                                                                                |
  | tcgplayerSkuId        | string                                      | The TCGplayer SKU ID for a specific variant.                                                                                                                                                                                                                      |
- | cardId                | string                                      | A JustTCG card ID to look up.                                                                                                                                                                                                                                     |
- | variantId             | string                                      | A JustTCG variant ID to look up.                                                                                                                                                                                                                                  |
+ | cardId                | string                                      | A JustTCG card ID or UUID to look up.                                                                                                                                                                                                                             |
+ | variantId             | string                                      | A JustTCG variant ID or UUID to look up.                                                                                                                                                                                                                          |
  | scryfallId            | string                                      | The Scryfall ID for the card (if applicable).                                                                                                                                                                                                                     |
  | mtgjsonId             | string                                      | The MTGJSON ID for the card (if applicable).                                                                                                                                                                                                                      |
  | query                 | string                                      | A general search query for the card name.                                                                                                                                                                                                                         |
@@ -235,8 +235,8 @@ You can mix and match different identifier types in a single batch request. The 
 {
   tcgplayerId?: string; // A TCGplayer product ID.
   tcgplayerSkuId?: string; // The TCGplayer SKU ID for a specific variant.
-  cardId?: string;      // A JustTCG card ID.
-  variantId?: string;   // A JustTCG variant ID.
+  cardId?: string;      // A JustTCG card ID or UUID.
+  variantId?: string;   // A JustTCG variant ID or UUID.
   scryfallId?: string;  // The Scryfall ID for the card.
   mtgjsonId?: string;   // The MTGJSON ID for the card.
   printing?: string[];  // Optional: Filter by specific print types for this item.
@@ -255,8 +255,10 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
 **`Card` Object:**
 ```typescript
 {
-  /** The unique identifier for the card. */
+  /** The unique slug identifier for the card. Will be renamed to `slug` in v2. */
   id: string;
+  /** The UUID of the card. Recommended for stable identification. */
+  uuid: string;
   /** The name of the card. */
   name: string;
   /** The game this card belongs to. */
@@ -284,8 +286,10 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
 **`Variant` Object:** (Contains detailed pricing)
 ```typescript
 {
-  /** The unique identifier for this variant. */
+  /** The unique slug identifier for this variant. Will be renamed to `slug` in v2. */
   id: string;
+  /** The UUID of this variant. Recommended for stable identification. */
+  uuid: string;
   /** The condition of the card variant (e.g., Near Mint). */
   condition: string;
   /** The printing type of the card variant (e.g., Foil, 1st Edition). */
@@ -321,10 +325,6 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
   avgPrice30d?: number | null; // Dollars
   minPrice30d?: number | null; // Dollars
   maxPrice30d?: number | null; // Dollars
-
-  /** DEPRECATED: Use the generic 'priceHistory' field with 'priceHistoryDuration=30d' instead. */
-  priceHistory30d?: PriceHistoryEntry[] | null;
-
   stddevPopPrice30d?: number | null;
   covPrice30d?: number | null;
   iqrPrice30d?: number | null;
