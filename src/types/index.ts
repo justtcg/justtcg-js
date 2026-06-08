@@ -95,9 +95,9 @@ export interface GetCardsParams extends QueryParams {
   tcgplayerId?: string;
   /** The TCGPlayer SKU of the specific variant. */
   tcgplayerSkuId?: string;
-  /** A JustTCG card ID. */
+  /** A JustTCG card ID or UUID. */
   cardId?: string;
-  /** A JustTCG variant ID. */
+  /** A JustTCG variant ID or UUID. */
   variantId?: string;
   /** The Scryfall ID of the card. */
   scryfallId?: string;
@@ -145,9 +145,9 @@ export interface BatchLookupItem {
   tcgplayerId?: string;
   /** The TCGPlayer SKU of the specific variant. */
   tcgplayerSkuId?: string;
-  /** A JustTCG card ID. */
+  /** A JustTCG card ID or UUID. */
   cardId?: string;
-  /** A JustTCG variant ID. */
+  /** A JustTCG variant ID or UUID. */
   variantId?: string;
   /** The Scryfall ID of the card. */
   scryfallId?: string;
@@ -262,8 +262,10 @@ export interface PriceHistoryEntry {
  * Contains detailed pricing and statistical data.
  */
 export interface Variant {
-  /** The unique identifier for this variant. */
+  /** The unique slug identifier for this variant. Will be renamed to `slug` in v2. */
   id: string;
+  /** The uuid of this variant. Recommended for stable identification of the variant. */
+  uuid: string;
   /** The condition of the card variant (e.g., Near Mint). */
   condition: Condition;
   /** The printing type of the card variant (e.g., Foil, 1st Edition). */
@@ -299,11 +301,6 @@ export interface Variant {
   avgPrice30d?: number | null; // Dollars
   minPrice30d?: number | null; // Dollars
   maxPrice30d?: number | null; // Dollars
-  /**
-   * @deprecated This field is deprecated and will be removed in a future version.
-   * Please use the generic 'priceHistory' field combined with the 'priceHistoryDuration' parameter set to '30d'.
-   */
-  priceHistory30d?: PriceHistoryEntry[] | null;
   stddevPopPrice30d?: number | null;
   covPrice30d?: number | null;
   iqrPrice30d?: number | null;
@@ -338,8 +335,10 @@ export interface Variant {
  * Represents a single trading card, which contains one or more variants.
  */
 export interface Card {
-  /** The unique identifier for the card. */
+  /** The unique slug identifier for the card. Will be renamed to `slug` in v2. */
   id: string;
+  /** The uuid of the card. Recommended for stable identification of the card. */
+  uuid: string;
   /** The name of the card. */
   name: string;
   /** The game this card belongs to. */
