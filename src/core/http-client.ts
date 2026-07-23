@@ -1,4 +1,5 @@
-import { BatchLookupItem } from "../types";
+import { createApiError } from '../errors';
+import { BatchLookupItem } from '../types';
 
 export interface HttpClientConfig {
   apiKey: string;
@@ -7,7 +8,40 @@ export interface HttpClientConfig {
 }
 
 export interface QueryParams {
-  [key: string]: string | string[] | number | boolean | undefined | null;
+  [key: string]:
+    | string
+    | number
+    | boolean
+    // Arrays are comma-joined on the wire. Mixed element types are allowed because v2 accepts
+    // numeric values in list params (e.g. `grade=9.5,10`).
+    | ReadonlyArray<string | number>
+    | undefined
+    | null;
+}
+
+/**
+ * A response with its headers and status preserved.
+ *
+ * v1 carries usage in the `_metadata` body field, but v2 moves usage to `RateLimit-*` headers and
+ * pagination to the RFC 8288 `Link` header — so the v2 resources need more than the parsed body.
+ */
+export interface JustTCGResponse<T> {
+  /** The parsed response body. */
+  body: T;
+  /** The response headers, needed for `RateLimit-*` and `Link`. */
+  headers: Headers;
+  /** The HTTP status code. */
+  status: number;
+}
+
+export interface RequestOptions {
+  method: 'GET' | 'POST';
+  /** The endpoint path, including the version prefix (e.g. `/v1/cards`). */
+  path: string;
+  /** Query parameters. Arrays are serialized comma-joined (`regions=NA,US`). */
+  params?: QueryParams;
+  /** A JSON body, serialized as-is. Only sent for POST. */
+  body?: unknown;
 }
 
 interface BatchLookupItemStringified {
@@ -35,6 +69,45 @@ interface BatchLookupItemStringified {
     include_statistics?: string;
 }
 
+/**
+ * Serialize a batch lookup body into the string-valued shape the API expects.
+ * Used by the v1 batch endpoint; v2 reuses the same body grammar but is sent via `postRaw` so
+ * that new fields are not silently dropped by this allowlist.
+ */
+function serializeBatchBody(body: BatchLookupItem[]): BatchLookupItemStringified[] {
+  return body.map(item => {
+    const stringifiedItem: BatchLookupItemStringified = {};
+    if (item.tcgplayerId) stringifiedItem.tcgplayerId = item.tcgplayerId;
+    if (item.tcgplayerSkuId) stringifiedItem.tcgplayerSkuId = item.tcgplayerSkuId;
+    if (item.cardId) stringifiedItem.cardId = item.cardId;
+    if (item.variantId) stringifiedItem.variantId = item.variantId;
+    if (item.scryfallId) stringifiedItem.scryfallId = item.scryfallId;
+    if (item.mtgjsonId) stringifiedItem.mtgjsonId = item.mtgjsonId;
+    if (item.printing) stringifiedItem.printing = Array.isArray(item.printing) ? item.printing.join(',') : item.printing;
+    if (item.condition) stringifiedItem.condition = Array.isArray(item.condition) ? item.condition.join(',') : item.condition;
+    if (item.include_price_history !== undefined) stringifiedItem.include_price_history = String(item.include_price_history);
+    if (item.include_statistics) stringifiedItem.include_statistics = Array.isArray(item.include_statistics) ? item.include_statistics.join(',') : item.include_statistics;
+    if (item.updated_after !== undefined) stringifiedItem.updated_after = String(item.updated_after);
+    return stringifiedItem;
+  });
+}
+
+/**
+ * Parse a response body without assuming a content type.
+ *
+ * Returns the parsed JSON when the payload is JSON (including `application/problem+json`), the raw
+ * text when it is not, and `undefined` for an empty body.
+ */
+async function parseBody(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
 export class HttpClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -47,35 +120,65 @@ export class HttpClient {
   }
 
   /**
+   * Performs a request and returns the body alongside the response headers and status.
+   *
+   * This is the single code path all other methods delegate to. Failed responses are thrown as the
+   * appropriate `JustTCGError` subclass, mapped from either v2's `problem+json` or v1's
+   * `{ error, code }`.
+   */
+  public async request<T>(options: RequestOptions): Promise<JustTCGResponse<T>> {
+    const url = new URL(`${this.baseUrl}${options.path}`);
+
+    // Safely append query parameters
+    if (options.params) {
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          // Arrays are comma-joined: `regions=NA,US`, `grade=9.5,10`.
+          url.searchParams.append(key, Array.isArray(value) ? value.join(',') : String(value));
+        }
+      });
+    }
+
+    const hasBody = options.method === 'POST' && options.body !== undefined;
+
+    if (this.debug) {
+      console.log(`[JustTCG] ${options.method} ${url.toString()}`);
+      if (hasBody) console.log(options.body);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: options.method,
+      headers: this.getHeaders(),
+      ...(hasBody && { body: JSON.stringify(options.body) }),
+    });
+
+    const body = await parseBody(response);
+
+    if (!response.ok) {
+      throw createApiError(response.status, body, response.headers);
+    }
+
+    return { body: body as T, headers: response.headers, status: response.status };
+  }
+
+  /**
    * Performs a GET request to a given path.
    * @param path The endpoint path (e.g., '/games').
    * @param params Optional query parameters.
    * @returns The JSON response from the API.
    */
   public async get<T>(path: string, params?: QueryParams): Promise<T> {
-    const url = new URL(`${this.baseUrl}${path}`);
+    const { body } = await this.request<T>({ method: 'GET', path, params });
+    return body;
+  }
 
-    // Safely append query parameters
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          url.searchParams.append(key, String(value));
-        }
-      });
-    }
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      // For now, we'll throw a generic error. We will enhance this later.
-      const errorBody = await response.json();
-      throw new Error(errorBody.error || 'An API error occurred');
-    }
-
-    return response.json() as Promise<T>;
+  /**
+   * Performs a GET request, preserving the response headers and status.
+   * @param path The endpoint path (e.g., '/cards').
+   * @param params Optional query parameters.
+   */
+  public async getRaw<T>(path: string, params?: QueryParams): Promise<JustTCGResponse<T>> {
+    return this.request<T>({ method: 'GET', path, params });
   }
 
   /**
@@ -85,40 +188,29 @@ export class HttpClient {
    * @returns The JSON response from the API.
    */
   public async post<T>(path: string, body: BatchLookupItem[]): Promise<T> {
-    const url = new URL(`${this.baseUrl}${path}`);
-
-    // Convert BatchLookupItem[] to BatchLookupItemStringified[]
-    const stringifiedBody: BatchLookupItemStringified[] = body.map(item => {
-      const stringifiedItem: BatchLookupItemStringified = {};
-      if (item.tcgplayerId) stringifiedItem.tcgplayerId = item.tcgplayerId;
-      if (item.tcgplayerSkuId) stringifiedItem.tcgplayerSkuId = item.tcgplayerSkuId;
-      if (item.cardId) stringifiedItem.cardId = item.cardId;
-      if (item.variantId) stringifiedItem.variantId = item.variantId;
-      if (item.scryfallId) stringifiedItem.scryfallId = item.scryfallId;
-      if (item.mtgjsonId) stringifiedItem.mtgjsonId = item.mtgjsonId;
-      if (item.printing) stringifiedItem.printing = Array.isArray(item.printing) ? item.printing.join(',') : item.printing;
-      if (item.condition) stringifiedItem.condition = Array.isArray(item.condition) ? item.condition.join(',') : item.condition;
-      if (item.include_price_history !== undefined) stringifiedItem.include_price_history = String(item.include_price_history);
-      if (item.include_statistics) stringifiedItem.include_statistics = Array.isArray(item.include_statistics) ? item.include_statistics.join(',') : item.include_statistics;
-      if (item.updated_after !== undefined) stringifiedItem.updated_after = String(item.updated_after);
-      return stringifiedItem;
-    });
-
-      if (this.debug) {
-        console.log(stringifiedBody);
-      }
-    const response = await fetch(url.toString(), {
+    const { body: responseBody } = await this.request<T>({
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(stringifiedBody),
+      path,
+      body: serializeBatchBody(body),
     });
+    return responseBody;
+  }
 
-    if (!response.ok) {
-      const errorBody = await response.json();
-      throw new Error(errorBody.error || 'An API error occurred');
-    }
-
-    return response.json() as Promise<T>;
+  /**
+   * Performs a POST request with the body sent as-is, preserving the response headers and status.
+   *
+   * Unlike `post`, the body is not passed through the v1 field allowlist, and query parameters are
+   * supported — the v2 batch endpoint reads `regions` from the query string.
+   * @param path The endpoint path (e.g., '/cards').
+   * @param body The JSON body, serialized verbatim.
+   * @param params Optional query parameters.
+   */
+  public async postRaw<T>(
+    path: string,
+    body: unknown,
+    params?: QueryParams,
+  ): Promise<JustTCGResponse<T>> {
+    return this.request<T>({ method: 'POST', path, params, body });
   }
 
   private getHeaders(): Record<string, string> {

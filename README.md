@@ -9,7 +9,8 @@ The official JavaScript/TypeScript SDK for the JustTCG API. Access real-time and
 ## Features
 
 -   **✅ Modern & Type-Safe:** Written entirely in TypeScript for a superior developer experience with static typing and autocomplete.
--   **🔐 Versioned API Access:** Clean, explicit access to API versions, starting with `v1`, ensuring your integrations are stable and future-proof.
+-   **🔐 Versioned API Access:** Clean, explicit access to API versions via `client.v1` and `client.v2`, ensuring your integrations are stable and future-proof.
+-   **🌍 v2 (public beta):** Localized pricing across regions, graded cards, cursor pagination with `iterate()`, and a `toV1Cards` adapter so you can migrate without rewriting your types. See [Using v2](#using-v2-public-beta).
 -   **🧼 Clean Data Models:** Raw API responses are automatically transformed into clean, intuitive JavaScript objects (e.g., prices in dollars, camelCase properties).
 -   **🚨 Robust Error Handling:** Predictable, typed errors allow you to gracefully handle API issues like invalid keys or rate limits.
 -   **🚀 Zero Dependencies:** A lightweight package with no production dependencies for fast and secure installation.
@@ -366,9 +367,126 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
 }
 ```
 
+## Using v2 (public beta)
+
+v2 lives alongside v1 on the same client. Reaching for `client.v2` **never** changes how `client.v1` behaves — every v1 type, id, and response shape is untouched. Adopt v2 at your own pace, endpoint by endpoint.
+
+```typescript
+import { JustTCG } from 'justtcg-js';
+
+const client = new JustTCG();
+
+// Search — returns the same { data, pagination, usage } envelope you know from v1
+const { data } = await client.v2.cards.search('charizard', { game: 'pokemon', limit: 5 });
+
+for (const card of data) {
+  // markets[0] is the primary market — the drop-in replacement for v1's flat `price`
+  console.log(card.name, card.variants[0]?.markets[0]?.price);
+}
+```
+
+### What's new in v2
+
+| Area | v1 | v2 |
+|---|---|---|
+| **Card id** | `id` is a slug; `uuid` is the UUID | `id` is the **UUID**; `slug` holds the old v1 id |
+| **Pricing** | flat `price`, `avgPrice30d`, … on the variant | a `markets[]` array, one entry per region; stats grouped under `markets[].periods` |
+| **Localization** | US/NA only | request `regions: ['UK', 'US']` — prices are the real local prices, **never** currency-converted |
+| **Graded cards** | not returned | ordinary variants with `type: 'graded'` and a `grading` object |
+| **Pagination** | `offset` + `total` | opaque `cursor` + `Link` header; walk it with `iterate()` |
+| **Usage** | `_metadata` in the body | `RateLimit-*` response headers, surfaced as `usage` |
+| **Errors** | `error`/`code` on the response | thrown [typed exceptions](#error-handling) (`NotFoundError`, `RateLimitError`, …) |
+
+Nested fields also regroup: `game` becomes `{ id, name }`, `set` becomes `{ id, name }`, and the third-party ids move under `external_ids` (`external_ids.tcgplayer`, `external_ids.scryfall`, …).
+
+### Methods
+
+All methods return `{ data, pagination?, usage }`. `pagination` is present on list methods (`get`, `search`) and absent on the others.
+
+```typescript
+// Browse / filter — with no params, this browses; with q/number it searches
+await client.v2.cards.get({ game: 'pokemon', regions: ['US'], limit: 20 });
+
+// Search by name
+await client.v2.cards.search('pikachu', { game: 'pokemon' });
+
+// Direct lookup — accepts a v2 UUID or a legacy v1 slug, and unwraps the single card.
+// This is the only lookup that accepts graded: 'include'.
+await client.v2.cards.retrieve('907005b3-b7bd-5eac-aed9-d20454b7fe8a');
+await client.v2.cards.retrieveVariant('e72a67fe-922e-5662-bcfc-e8cb509f8220');
+
+// Batch — the v1 body grammar is unchanged, so existing payloads migrate as-is.
+// `regions` applies to every item and is sent once.
+await client.v2.cards.getByBatch([{ cardId: '…' }, { tcgplayerId: '42' }], { regions: ['US'] });
+```
+
+### Iterating every page
+
+`iterate()` walks the entire result set one card at a time, fetching pages lazily — breaking out of the loop stops the requests, so it's safe to point at a large set. Use `iteratePages()` when you need the page boundaries or want to watch `usage` as you go.
+
+```typescript
+for await (const card of client.v2.cards.iterate({ game: 'pokemon', limit: 100 })) {
+  console.log(card.name);
+}
+
+for await (const page of client.v2.cards.iteratePages({ game: 'pokemon' })) {
+  console.log(page.data.length, 'cards,', page.usage.remaining, 'requests left');
+}
+```
+
+### Localized pricing
+
+Request regions in priority order; `markets` come back in the same order, and `markets[0]` is the market that `min_price` and `orderBy` apply to. A region with no local data has `price: null` — the SDK never falls back to a different currency.
+
+```typescript
+const { data } = await client.v2.cards.search('charizard', {
+  game: 'pokemon',
+  regions: ['UK', 'US'],
+});
+
+for (const market of data[0].variants[0].markets) {
+  console.log(market.region, market.price, market.currency); // 'UK' 410.5 'GBP'
+}
+```
+
+Omitting `regions` yields a single `US` market (USD), reproducing v1's pricing. Extra regions and `graded: 'include'` carry a cost surcharge; exact figures are set at launch.
+
+### Migrating without rewriting your types
+
+If your codebase is already typed against the v1 `Card`, switch the fetch to v2 and run the results through `toV1Cards` — it reshapes v2 back into the exact v1 shape, so nothing downstream changes.
+
+```typescript
+import { JustTCG, toV1Cards } from 'justtcg-js';
+import type { Card } from 'justtcg-js';
+
+const { data } = await client.v2.cards.get({ game: 'pokemon' });
+const legacy: Card[] = toV1Cards(data); // flat price, avgPrice, game as a string — all v1 names
+
+// Choose which region flattens into the price fields (defaults to the primary market):
+const ukPriced = toV1Cards(data, { region: 'UK' });
+```
+
+Two things deliberately don't round-trip: graded variants are **dropped** unless you pass `{ includeGraded: true }` (v1 was raw-only), and `printing` loses the `" - <Language>"` suffix v1 appended for non-English cards (v2 carries `language` separately). Use `toV1Card` for a single card and `toV1Variant` for a single variant.
+
+> **Note:** External-id GET parameters (`tcgplayerId`, `scryfallId`, …) are pending on the v2 `get` endpoint. Until then, use them via `getByBatch` or stay on `client.v1` for those lookups.
+
 ## Error Handling
 
 The SDK surfaces errors in two primary ways: **thrown exceptions** for critical SDK issues and an **`error` property** on the response object for API issues.
+
+> **v2 note:** v2 never uses the `error` property — it always throws a typed exception on failure. The classes are exported (`JustTCGError` and its subclasses `AuthenticationError`, `ValidationError`, `RegionNotAvailableError`, `NotFoundError`, `RateLimitError`, `ApiError`) so you can branch with `instanceof`. Each carries `.status`, `.code`, and the raw `.problem` body; `RateLimitError` adds `.retryAfter`, `RegionNotAvailableError` adds `.available`.
+>
+> ```typescript
+> import { NotFoundError, RateLimitError } from 'justtcg-js';
+>
+> try {
+>   await client.v2.cards.retrieve(cardId);
+> } catch (error) {
+>   if (error instanceof NotFoundError) { /* no such card */ }
+>   else if (error instanceof RateLimitError) { console.log(`retry after ${error.retryAfter}s`); }
+>   else throw error;
+> }
+> ```
 
 ### 1. Thrown Exceptions (SDK-level Errors)
 
@@ -426,6 +544,13 @@ To run an example, first ensure you have set your `JUSTTCG_API_KEY` environment 
 # Example: Find the most valuable Lorcana cards from The First Chapter
 export JUSTTCG_API_KEY="YOUR_API_KEY_HERE"
 npx ts-node examples/find-most-valuable-lorcana-cards.ts
+```
+
+For the v2 API (public beta):
+```bash
+npx ts-node examples/v2-quickstart.ts           # search, direct lookup, localized pricing
+npx ts-node examples/v2-iterate-and-graded.ts   # cursor iteration and graded cards
+npx ts-node examples/v2-migrate-from-v1.ts      # toV1Cards adapter and typed errors
 ```
 
 ## License
