@@ -31,7 +31,7 @@ export class V2CardsResource extends V2BaseResource {
     const response = await this._get<V2CardsResponseBody>('/cards', params);
     return {
       data: response.body.data,
-      pagination: parseV2Pagination(response.headers),
+      pagination: parseV2Pagination(response.headers, response.body.meta),
       usage: parseV2Usage(response.headers),
     };
   }

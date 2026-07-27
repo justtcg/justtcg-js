@@ -358,13 +358,18 @@ export interface V2BatchOptions {
 /** The raw `/v2/cards` response body. Always an array, including for direct lookups. */
 export interface V2CardsResponseBody {
   data: V2Card[];
+  /** Result-count metadata. Present on browse/search responses; absent is treated as unknown. */
+  meta?: {
+    /** Number of results in this page. */
+    count?: number;
+    /** Total number of results across all pages. */
+    total?: number;
+    has_more?: boolean;
+  };
 }
 
 /**
- * Cursor pagination, parsed from the RFC 8288 `Link` header.
- *
- * Unlike v1 there is no `total`: the API reports next/prev links only, so `hasMore` is simply
- * whether a `next` link was present.
+ * Cursor pagination, parsed from the RFC 8288 `Link` header plus the response body's `meta`.
  */
 export interface V2Pagination {
   /** Pass as `cursor` to fetch the next page. Absent on the last page. */
@@ -373,6 +378,11 @@ export interface V2Pagination {
   prevCursor?: string;
   /** Whether a next page exists. */
   hasMore: boolean;
+  /** Number of results in this page, from `meta.count`. */
+  count?: number;
+  /** Total number of results across all pages, from `meta.total` (falls back to the
+   *  `X-Total-Count` header if the body omits `meta`). */
+  total?: number;
 }
 
 /**

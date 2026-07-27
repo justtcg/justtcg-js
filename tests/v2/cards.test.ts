@@ -144,6 +144,15 @@ describe('v2 cards', () => {
       expect(result.pagination).toEqual({ hasMore: false });
     });
 
+    it('exposes total and count from the response body meta', async () => {
+      mockFetch({ data: [CARD], meta: { count: 1, total: 31474, has_more: true } });
+
+      const result = await client.v2.cards.get({ game: 'pokemon' });
+
+      expect(result.pagination?.total).toBe(31474);
+      expect(result.pagination?.count).toBe(1);
+    });
+
     it('forwards a cursor back as a query param', async () => {
       const fetchMock = mockFetch({ data: [] });
 

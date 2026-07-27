@@ -85,4 +85,22 @@ describe('parseV2Pagination', () => {
 
     expect(pagination).toEqual({ hasMore: false });
   });
+
+  it('reads total and count from the response body meta', () => {
+    const pagination = parseV2Pagination(new Headers(), { count: 5, total: 31474 });
+
+    expect(pagination).toEqual({ hasMore: false, count: 5, total: 31474 });
+  });
+
+  it('falls back to the X-Total-Count header when meta is absent', () => {
+    const pagination = parseV2Pagination(new Headers({ 'X-Total-Count': '31474' }));
+
+    expect(pagination.total).toBe(31474);
+  });
+
+  it('prefers meta.total over the X-Total-Count header when both are present', () => {
+    const pagination = parseV2Pagination(new Headers({ 'X-Total-Count': '999' }), { total: 42 });
+
+    expect(pagination.total).toBe(42);
+  });
 });

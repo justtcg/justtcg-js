@@ -60,13 +60,26 @@ export function parseV2Usage(headers: Headers): V2UsageMeta {
 }
 
 /**
- * Parse the `Link` header into cursor pagination.
+ * Parse the `Link` header (plus the response body's `meta`) into cursor pagination.
  *
  * A response with no `Link` header is a single complete page, which yields `hasMore: false` and no
  * cursors rather than `undefined` — so callers can loop on `hasMore` without a null check.
+ *
+ * @param meta The response body's `meta` object, when present. `total` falls back to the
+ *   `X-Total-Count` header if `meta.total` is absent, since some responses only carry the header.
  */
-export function parseV2Pagination(headers: Headers): V2Pagination {
+export function parseV2Pagination(
+  headers: Headers,
+  meta?: { count?: number; total?: number },
+): V2Pagination {
   const pagination: V2Pagination = { hasMore: false };
+
+  const count = meta?.count;
+  if (count !== undefined) pagination.count = count;
+
+  const total = meta?.total ?? intHeader(headers, 'X-Total-Count');
+  if (total !== undefined) pagination.total = total;
+
   const header = headers.get('Link');
   if (!header) return pagination;
 
