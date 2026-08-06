@@ -17,7 +17,7 @@ async function main() {
     for await (const card of client.v2.cards.iterate({
       game: 'pokemon',
       set: 'base-set-pokemon',
-      orderBy: 'price',
+      order_by: 'price',
       order: 'desc',
       limit: 50,
     })) {

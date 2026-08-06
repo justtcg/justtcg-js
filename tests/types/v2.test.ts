@@ -41,7 +41,7 @@ describe('v2 types', () => {
       printing: ['Holofoil'],
       min_price: 1.25,
       order: 'asc',
-      orderBy: '7d',
+      order_by: '7d',
       limit: 50,
       cursor: 'eyJvIjo1MH0=',
     };
@@ -55,7 +55,7 @@ describe('v2 types', () => {
     expect(url.searchParams.get('regions')).toBe('US,NA');
     expect(url.searchParams.get('include')).toBe('periods.30d,price_history.90d');
     expect(url.searchParams.get('condition')).toBe('Near Mint,LP');
-    expect(url.searchParams.get('orderBy')).toBe('7d');
+    expect(url.searchParams.get('order_by')).toBe('7d');
     expect(url.searchParams.get('min_price')).toBe('1.25');
   });
 

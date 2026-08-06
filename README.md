@@ -415,9 +415,9 @@ await client.v2.cards.search('pikachu', { game: 'pokemon' });
 await client.v2.cards.retrieve('907005b3-b7bd-5eac-aed9-d20454b7fe8a');
 await client.v2.cards.retrieveVariant('e72a67fe-922e-5662-bcfc-e8cb509f8220');
 
-// Batch — the v1 body grammar is unchanged, so existing payloads migrate as-is.
+// Batch — snake_case body keys (a v1 payload needs its keys renamed, not sent as-is).
 // `regions` applies to every item and is sent once.
-await client.v2.cards.getByBatch([{ cardId: '…' }, { tcgplayerId: '42' }], { regions: ['US'] });
+await client.v2.cards.getByBatch([{ card_id: '…' }, { tcgplayer_id: '42' }], { regions: ['US'] });
 ```
 
 ### Iterating every page
@@ -436,7 +436,7 @@ for await (const page of client.v2.cards.iteratePages({ game: 'pokemon' })) {
 
 ### Localized pricing
 
-Request regions in priority order; `markets` come back in the same order, and `markets[0]` is the market that `min_price` and `orderBy` apply to. A region with no local data has `price: null` — the SDK never falls back to a different currency.
+Request regions in priority order; `markets` come back in the same order, and `markets[0]` is the market that `min_price` and `order_by` apply to. A region with no local data has `price: null` — the SDK never falls back to a different currency.
 
 ```typescript
 const { data } = await client.v2.cards.search('charizard', {

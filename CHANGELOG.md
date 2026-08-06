@@ -3,6 +3,22 @@
 All notable changes to this project are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.4.0] - 2026-08-06
+
+### Changed (breaking, v2 only)
+
+- **v2 request grammar is now fully snake_case.** Two holdovers from v1's camelCase are gone:
+  - `GetV2CardsParams.orderBy` → `order_by`.
+  - `V2BatchLookupItem` fields (`cardId`, `tcgplayerId`, `tcgplayerSkuId`, `variantId`,
+    `scryfallId`, `mtgjsonId`, `priceHistoryDuration`) → `card_id`, `tcgplayer_id`,
+    `tcgplayer_sku_id`, `variant_id`, `scryfall_id`, `mtgjson_id`, `price_history_duration`.
+  - A batch body built against the old (pre-this-release) shape silently resolves no identifier
+    per item and the API returns `400`; there is no dual-case transition window. `client.v1` is
+    unaffected — its camelCase grammar is permanent.
+  - Matches the corresponding backend change in `cards-v2` (2026-07-29).
+
 ## [0.3.0] - 2026-07-22
 
 ### Added

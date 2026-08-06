@@ -70,9 +70,9 @@ interface BatchLookupItemStringified {
 }
 
 /**
- * Serialize a batch lookup body into the string-valued shape the API expects.
- * Used by the v1 batch endpoint; v2 reuses the same body grammar but is sent via `postRaw` so
- * that new fields are not silently dropped by this allowlist.
+ * Serialize a batch lookup body into the string-valued shape the v1 API expects.
+ * v1-only: v2's batch grammar is snake_case (§6) and is sent via `postRaw`, bypassing this
+ * camelCase allowlist entirely.
  */
 function serializeBatchBody(body: BatchLookupItem[]): BatchLookupItemStringified[] {
   return body.map(item => {

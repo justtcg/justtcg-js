@@ -115,13 +115,13 @@ describe('HttpClient', () => {
     it('sends the body verbatim and supports query parameters', async () => {
       const fetchMock = mockFetch({ data: [] });
 
-      await client.postRaw('/v2/cards', [{ cardId: 'card-abc', somethingNew: 1 }], {
+      await client.postRaw('/v2/cards', [{ card_id: 'card-abc', somethingNew: 1 }], {
         regions: ['NA'],
       });
 
       const [, init] = fetchMock.mock.calls[0];
       // Unknown keys survive — unlike `post`, there is no field allowlist.
-      expect(JSON.parse(init.body)).toEqual([{ cardId: 'card-abc', somethingNew: 1 }]);
+      expect(JSON.parse(init.body)).toEqual([{ card_id: 'card-abc', somethingNew: 1 }]);
       expect(calledUrl(fetchMock).searchParams.get('regions')).toBe('NA');
     });
   });

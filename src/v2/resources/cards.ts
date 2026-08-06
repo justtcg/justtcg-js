@@ -138,8 +138,9 @@ export class V2CardsResource extends V2BaseResource {
   /**
    * Retrieves cards matching a batch of specific identifiers.
    *
-   * The body grammar is unchanged from v1, so an existing batch payload can be sent as-is. Batch
-   * responses are never paginated, and always contain raw variants only.
+   * The body grammar is snake_case (`card_id`, `tcgplayer_id`, …), matching every other v2 param —
+   * a v1 batch payload is **not** accepted as-is and needs its keys renamed. Batch responses are
+   * never paginated, and always contain raw variants only.
    * @param items An array of objects, each identifying a card to look up.
    * @param options Request-wide options; `regions` applies to every item.
    */

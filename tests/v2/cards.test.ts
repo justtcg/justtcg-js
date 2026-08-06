@@ -111,7 +111,7 @@ describe('v2 cards', () => {
         regions: ['US', 'NA'],
         include: ['periods.30d', 'price_history.90d'],
         min_price: 10,
-        orderBy: '30d',
+        order_by: '30d',
         order: 'asc',
         limit: 50,
       });
@@ -121,7 +121,7 @@ describe('v2 cards', () => {
       expect(url.searchParams.get('regions')).toBe('US,NA');
       expect(url.searchParams.get('include')).toBe('periods.30d,price_history.90d');
       expect(url.searchParams.get('min_price')).toBe('10');
-      expect(url.searchParams.get('orderBy')).toBe('30d');
+      expect(url.searchParams.get('order_by')).toBe('30d');
       expect(url.searchParams.get('limit')).toBe('50');
     });
 
@@ -251,7 +251,7 @@ describe('v2 cards', () => {
       const fetchMock = mockFetch({ data: [CARD] });
 
       const result = await client.v2.cards.getByBatch(
-        [{ cardId: CARD.id, condition: ['Near Mint'] }, { tcgplayerId: '42' }],
+        [{ card_id: CARD.id, condition: ['Near Mint'] }, { tcgplayer_id: '42' }],
         { regions: ['US', 'NA'] },
       );
 
@@ -260,8 +260,8 @@ describe('v2 cards', () => {
       // `regions` is request-wide, so it rides the query string rather than each item.
       expect(new URL(url).searchParams.get('regions')).toBe('US,NA');
       expect(JSON.parse(init.body as string)).toEqual([
-        { cardId: CARD.id, condition: ['Near Mint'] },
-        { tcgplayerId: '42' },
+        { card_id: CARD.id, condition: ['Near Mint'] },
+        { tcgplayer_id: '42' },
       ]);
       // Batch responses are never paginated.
       expect(result.pagination).toBeUndefined();
@@ -271,7 +271,7 @@ describe('v2 cards', () => {
     it('omits regions entirely when no options are given', async () => {
       const fetchMock = mockFetch({ data: [] });
 
-      await client.v2.cards.getByBatch([{ cardId: CARD.id }]);
+      await client.v2.cards.getByBatch([{ card_id: CARD.id }]);
 
       expect(new URL(fetchMock.mock.calls[0][0] as string).search).toBe('');
     });

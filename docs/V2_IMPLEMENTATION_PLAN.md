@@ -45,8 +45,9 @@ omitted, so every `V2Period` key is optional. The one field that is genuinely nu
 
 ### 1.2 Request grammar
 
-- snake_case query params: `card_id`, `variant_id`, `min_price`, `updated_after`, `grading_company`.
-  **Exceptions that stay camelCase: `orderBy`, `order`, `limit`, `q`, `game`, `set`, `number`.**
+- snake_case query params: `card_id`, `variant_id`, `min_price`, `updated_after`, `grading_company`,
+  `order_by` (renamed from v1's `orderBy` on 2026-07-29 — it was the last unconverted param).
+  `order`, `limit`, `q`, `game`, `set`, `number` are single words, so v1/v2 spelling coincides.
 - Preferred direct form is path-style: `GET /v2/cards/{identifier}`.
 - `regions` — comma list, priority order, `markets[0]` is primary. Only `NA` and `US` are
   serviceable today; anything else in the vocabulary returns a `region-not-available` 400.
@@ -56,8 +57,9 @@ omitted, so every `V2Period` key is optional. The one field that is genuinely nu
   `include=periods[.<window>],price_history[.<window>]`. Default = `periods` (all) + `price_history.7d`.
   An explicit `include` **replaces** the default set.
 - `cursor` replaces `offset`. `limit` unchanged.
-- Batch `POST /v2/cards` keeps the **v1 camelCase body verbatim** (`cardId`, `tcgplayerId`, …).
-  `regions` is read from the **query string**, never per item. Batch is always raw (graded excluded).
+- Batch `POST /v2/cards` body is **snake_case** (`card_id`, `tcgplayer_id`, …) as of 2026-07-29 —
+  the v1 camelCase body is no longer accepted. `regions` is read from the **query string**, never
+  per item. Batch is always raw (graded excluded).
 
 ### 1.3 Gaps vs v1 the SDK must not paper over
 
@@ -87,7 +89,7 @@ res.usage;            // V2UsageMeta (from RateLimit headers)
 
 await client.v2.cards.retrieve('907005b3-…');            // path-style, returns V2Card | null
 await client.v2.cards.search('Charizard', { game: 'pokemon' });
-await client.v2.cards.getByBatch([{ cardId: '…' }], { regions: ['NA'] });
+await client.v2.cards.getByBatch([{ card_id: '…' }], { regions: ['NA'] });
 
 for await (const card of client.v2.cards.iterate({ game: 'pokemon' })) { … }  // cursor auto-paging
 ```

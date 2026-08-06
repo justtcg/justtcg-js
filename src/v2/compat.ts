@@ -75,7 +75,7 @@ export const V1_PERIOD_FIELDS: {
 export interface ToV1Options {
   /**
    * Which market to flatten into v1's single set of price fields. Defaults to `markets[0]`, the
-   * primary market — the one `min_price` and `orderBy` were applied to.
+   * primary market — the one `min_price` and `order_by` were applied to.
    *
    * If you name a region the card has no entry for, the price fields come back `null` rather than
    * falling back to another region: silently handing you a different currency would be worse than

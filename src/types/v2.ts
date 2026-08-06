@@ -130,7 +130,7 @@ export interface V2Period {
 
 /**
  * Pricing for one region. There is one entry per region you requested, in the order you requested
- * them, and `markets[0]` is your **primary market** — `min_price` and `orderBy` apply to it only.
+ * them, and `markets[0]` is your **primary market** — `min_price` and `order_by` apply to it only.
  *
  * Prices are never converted between currencies: a market's `price` is the real price observed in
  * that region, or `null` if there is no local data. If you want a USD fallback, request `US` or
@@ -228,8 +228,8 @@ export type V2IncludeComponent =
 /**
  * The named parameters for `GET /v2/cards`.
  *
- * Note the casing: v2 uses snake_case for identifiers and filters (`card_id`, `min_price`), but
- * kept `orderBy` camelCase from v1.
+ * Note the casing: v2 uses snake_case for every identifier, filter, and sort param (`card_id`,
+ * `min_price`, `order_by`) — as of 2026-07-29 there is no remaining camelCase holdover from v1.
  *
  * This carries no index signature, so `Omit`/`Pick` over it behave as expected. The wire-ready
  * variant is {@link GetV2CardsParams}.
@@ -277,7 +277,7 @@ export interface V2CardsParams {
   /** Sort direction. Defaults to `desc`. */
   order?: Order;
   /** Field to sort by, applied to the primary market only. Defaults to `price`. */
-  orderBy?: OrderBy;
+  order_by?: OrderBy;
   /** Results per page. Defaults to 20; the maximum depends on your plan. */
   limit?: number;
   /** The opaque pagination cursor from the previous response. Replaces v1's `offset`. */
@@ -299,7 +299,7 @@ export type V2SearchOptions = Omit<V2CardsParams, 'q' | 'card_id' | 'variant_id'
  * Options for a direct lookup.
  *
  * Narrower than {@link V2SearchOptions}: the list-shaping parameters (`limit`, `cursor`, `order`,
- * `orderBy`, `min_price`) and the search filters (`game`, `set`, `number`, `updated_after`) have no
+ * `order_by`, `min_price`) and the search filters (`game`, `set`, `number`, `updated_after`) have no
  * meaning when you have already named the exact card.
  */
 export type V2RetrieveOptions = Omit<
@@ -313,7 +313,7 @@ export type V2RetrieveOptions = Omit<
   | 'updated_after'
   | 'min_price'
   | 'order'
-  | 'orderBy'
+  | 'order_by'
   | 'limit'
   | 'cursor'
 >;
@@ -321,22 +321,24 @@ export type V2RetrieveOptions = Omit<
 /**
  * One item in a `POST /v2/cards` batch body.
  *
- * The body grammar is inherited verbatim from v1 — including its camelCase keys — so v1 batch
- * payloads migrate with no changes. Batch always returns raw variants; graded is direct-only.
+ * As of 2026-07-29 the body grammar is snake_case, matching every other v2 param — this reversed
+ * an earlier decision to keep v1's camelCase keys for zero-change migration. A body built against
+ * the pre-2026-07-29 shape (`cardId`, `tcgplayerId`, …) will no longer resolve any identifier and
+ * the API 400s. Batch always returns raw variants; graded is direct-only.
  */
 export interface V2BatchLookupItem {
   /** A TCGplayer product ID. */
-  tcgplayerId?: string;
+  tcgplayer_id?: string;
   /** The TCGplayer SKU of a specific variant. */
-  tcgplayerSkuId?: string;
+  tcgplayer_sku_id?: string;
   /** A JustTCG card ID or UUID. */
-  cardId?: string;
+  card_id?: string;
   /** A JustTCG variant ID or UUID. */
-  variantId?: string;
+  variant_id?: string;
   /** The Scryfall ID of the card. */
-  scryfallId?: string;
+  scryfall_id?: string;
   /** The MTGJSON ID of the card. */
-  mtgjsonId?: string;
+  mtgjson_id?: string;
   /** Filter to these print types. */
   printing?: string[];
   /** Filter to these conditions. */
@@ -344,7 +346,7 @@ export interface V2BatchLookupItem {
   /** Whether to include price history for this item. */
   include_price_history?: boolean;
   /** The price-history window for this item. */
-  priceHistoryDuration?: V2PriceHistoryWindow;
+  price_history_duration?: V2PriceHistoryWindow;
 }
 
 /** Options for a v2 batch request. `regions` is sent as a query parameter, never per item. */
