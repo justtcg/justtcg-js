@@ -87,6 +87,24 @@ export type Order = 'asc' | 'desc';
 export type OrderBy = 'price' | '24h' | '7d' | '30d' | '90d';
 export type PriceHistoryDuration = '7d' | '30d' | '90d' | '180d' | '1y';
 
+/** The complete set of language values the API accepts, in canonical casing. */
+export const CARD_LANGUAGES = [
+  'English',
+  'Japanese',
+  'French',
+  'German',
+  'Spanish',
+  'Italian',
+  'Chinese (S)',
+  'Portuguese',
+  'Chinese (T)',
+  'Russian',
+  'Korean',
+] as const;
+
+/** A union of every valid `language` filter value. Use this for type-safe language lists. */
+export type CardLanguage = (typeof CARD_LANGUAGES)[number];
+
 /**
  * Parameters for the GET /cards endpoint.
  */
@@ -135,6 +153,26 @@ export interface GetCardsParams extends QueryParams {
   include_null_prices?: boolean;
   /** Filters results to include only cards where the current market price is greater than or equal to the provided value. */
   min_price?: number;
+  /**
+   * Narrows each card's `variants[]` to the requested language(s) after grouping.
+   * Never drops a card — a card with no matching variants is returned with an
+   * empty `variants[]`.
+   *
+   * Accepted values (case-insensitive on the wire):
+   * `"English"`, `"Japanese"`, `"French"`, `"German"`, `"Spanish"`, `"Italian"`,
+   * `"Chinese (S)"`, `"Portuguese"`, `"Chinese (T)"`, `"Russian"`, `"Korean"`.
+   *
+   * Note: variants with `language: null` in the database are treated as English
+   * by the API — `language: ['English']` will include them.
+   *
+   * Passing multiple values acts as an OR filter:
+   * `language: ['English', 'Japanese']` keeps variants of either language.
+   *
+   * @example
+   * // English + Japanese variants only
+   * client.v1.cards.get({ game: 'pokemon', language: ['English', 'Japanese'] })
+   */
+  language?: (CardLanguage | string)[];
 }
 
 /**
@@ -193,6 +231,26 @@ export interface SearchCardsOptions {
   include_null_prices?: boolean;
   /** Filters results to include only cards where the current market price is greater than or equal to the provided value. */
   min_price?: number;
+  /**
+   * Narrows each card's `variants[]` to the requested language(s) after grouping.
+   * Never drops a card — a card with no matching variants is returned with an
+   * empty `variants[]`.
+   *
+   * Accepted values (case-insensitive on the wire):
+   * `"English"`, `"Japanese"`, `"French"`, `"German"`, `"Spanish"`, `"Italian"`,
+   * `"Chinese (S)"`, `"Portuguese"`, `"Chinese (T)"`, `"Russian"`, `"Korean"`.
+   *
+   * Note: variants with `language: null` in the database are treated as English
+   * by the API — `language: ['English']` will include them.
+   *
+   * Passing multiple values acts as an OR filter:
+   * `language: ['English', 'Japanese']` keeps variants of either language.
+   *
+   * @example
+   * // English + Japanese variants only
+   * client.v1.cards.get({ game: 'pokemon', language: ['English', 'Japanese'] })
+   */
+  language?: (CardLanguage | string)[];
 }
 
 /**

@@ -119,4 +119,27 @@ describe('CardsResource', () => {
       expect(getSpy).toHaveBeenCalledWith({ q: query, ...options });
     });
   });
+
+  describe('language filter', () => {
+    it('serializes a single language as a plain string on the query', async () => {
+      mockedHttpClient.get.mockResolvedValue({ data: [], _metadata: {} });
+      const params: GetCardsParams = { game: 'pokemon', language: ['Japanese'] };
+      await client.v1.cards.get(params);
+      expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/cards', params);
+    });
+
+    it('passes a multi-value language array through to the http client', async () => {
+      mockedHttpClient.get.mockResolvedValue({ data: [], _metadata: {} });
+      const params: GetCardsParams = { language: ['English', 'French'] };
+      await client.v1.cards.get(params);
+      expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/cards', params);
+    });
+
+    it('search() forwards language through to get()', async () => {
+      const getSpy = vi.spyOn(client.v1.cards, 'get');
+      mockedHttpClient.get.mockResolvedValue({ data: [], _metadata: {} });
+      await client.v1.cards.search('Charizard', { language: ['Japanese'] });
+      expect(getSpy).toHaveBeenCalledWith({ q: 'Charizard', language: ['Japanese'] });
+    });
+  });
 });

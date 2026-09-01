@@ -314,6 +314,38 @@ describe('v2 cards', () => {
     });
   });
 
+  describe('language filter', () => {
+    it('serializes language=["English"] as language=English on the query string', async () => {
+      const fetchMock = mockFetch({ data: [CARD] });
+      await client.v2.cards.get({ language: ['English'] });
+      expect(calledUrl(fetchMock).searchParams.get('language')).toBe('English');
+    });
+
+    it('CSV-joins multiple language values', async () => {
+      const fetchMock = mockFetch({ data: [] });
+      await client.v2.cards.get({ language: ['Japanese', 'French'] });
+      expect(calledUrl(fetchMock).searchParams.get('language')).toBe('Japanese,French');
+    });
+
+    it('omitting language sends no language param', async () => {
+      const fetchMock = mockFetch({ data: [] });
+      await client.v2.cards.get({ game: 'pokemon' });
+      expect(calledUrl(fetchMock).searchParams.has('language')).toBe(false);
+    });
+
+    it('language is available on V2SearchOptions (via search())', async () => {
+      const fetchMock = mockFetch({ data: [] });
+      await client.v2.cards.search('Pikachu', { language: ['English'] });
+      expect(calledUrl(fetchMock).searchParams.get('language')).toBe('English');
+    });
+
+    it('language is available on V2RetrieveOptions (via retrieve())', async () => {
+      const fetchMock = mockFetch({ data: [CARD] });
+      await client.v2.cards.retrieve(CARD.id, { language: ['Japanese'] });
+      expect(calledUrl(fetchMock).searchParams.get('language')).toBe('Japanese');
+    });
+  });
+
   it('leaves the v1 client reachable and pointed at /v1', async () => {
     const fetchMock = mockFetch({ data: [], _metadata: {} });
 

@@ -212,6 +212,7 @@ A powerful and flexible method to browse, filter, and retrieve a paginated list 
  | include_statistics    | '7d' \| '30d' \| '90d' \| '1y' \| 'allTime' | Specify which timeframe statistics to include in the response. Defaults to all timeframes. You can provide a comma-separated list (e.g., 7d,30d,1y) to include multiple statistics.                                                                               |
  | include_null_prices   | boolean                                     | Option to include cards that currently have null prices. Defaults to 'false'.                                                                                                                                                                                     |
  | min_price             | number                                      | Filters results to include only cards where the current market price is greater than or equal to the provided value.                                                                                                                                              |
+ | language              | `(CardLanguage \| string)[]`                | Narrows each card's `variants[]` to the requested language(s). Never drops a card. Valid values: `"English"`, `"Japanese"`, `"French"`, `"German"`, `"Spanish"`, `"Italian"`, `"Chinese (S)"`, `"Portuguese"`, `"Chinese (T)"`, `"Russian"`, `"Korean"`. Variants with a `null` language resolve to `"English"`. |
  | orderBy               | 'price' \| '24h' \| '7d' \| '30d' \| '90d'  | The field to sort the results by. Default is 'price'.                                                                                                                                                                                                             |
  | order                 | 'asc' \| 'desc'                             | The sort order. Default is 'desc'.                                                                                                                                                                                                                                |
  | limit                 | number                                      | The maximum number of results to return. Default is 20. <table><tr><th>Plan</th><th>Max</th></tr><tr><td>Free</td><td>20</td></tr><tr><td>Starter</td><td>100</td></tr><tr><td>Professional</td><td>100</td></tr><tr><td>Enterprise</td><td>200</td></tr></table> |
@@ -448,6 +449,28 @@ for (const market of data[0].variants[0].markets) {
   console.log(market.region, market.price, market.currency); // 'UK' 410.5 'GBP'
 }
 ```
+
+#### Language filtering
+
+Narrow each card's `variants[]` to specific language(s). A card is never dropped — it comes back with an empty `variants[]` if none of its variants match. Pagination counts (`meta.total`) are unaffected.
+
+```typescript
+// Filter to Japanese variants only (variants with language: null are treated as English
+// by the API — they will NOT be included unless you also pass 'English')
+const jpCards = await client.v2.cards.get({
+  game: 'pokemon',
+  language: ['Japanese'],
+});
+
+// Or use the typed constant to avoid typos:
+import { CARD_LANGUAGES } from 'justtcg';
+const multiLangCards = await client.v2.cards.get({
+  game: 'pokemon',
+  language: [CARD_LANGUAGES[0], CARD_LANGUAGES[1]], // English, Japanese
+});
+```
+
+The same `language` parameter is available on `v2.cards.search()`, `v2.cards.retrieve()`, and `v1.cards.get()` / `v1.cards.search()`.
 
 Omitting `regions` yields a single `US` market (USD), reproducing v1's pricing. Extra regions and `graded: 'include'` carry a cost surcharge; exact figures are set at launch.
 

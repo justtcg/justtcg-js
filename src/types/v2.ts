@@ -12,7 +12,7 @@
  */
 
 import { QueryParams } from '../core/http-client';
-import { Condition, ConditionAbv, Order, OrderBy } from './index';
+import { Condition, ConditionAbv, Order, OrderBy, CardLanguage } from './index';
 
 // --- regions ---------------------------------------------------------------------------------
 
@@ -282,6 +282,21 @@ export interface V2CardsParams {
   limit?: number;
   /** The opaque pagination cursor from the previous response. Replaces v1's `offset`. */
   cursor?: string;
+  /**
+   * Narrows each card's `variants[]` to the requested language(s) after grouping.
+   * Never drops a card — a card with no matching variants is returned with an
+   * empty `variants[]`. Pagination counts (`meta.total`) are unaffected.
+   *
+   * Accepted values (case-insensitive on the wire):
+   * `"English"`, `"Japanese"`, `"French"`, `"German"`, `"Spanish"`, `"Italian"`,
+   * `"Chinese (S)"`, `"Portuguese"`, `"Chinese (T)"`, `"Russian"`, `"Korean"`.
+   *
+   * Note: variants with `language: null` in the database resolve to `"English"`.
+   *
+   * @example
+   * client.v2.cards.get({ game: 'pokemon', language: ['Japanese'] })
+   */
+  language?: readonly (CardLanguage | string)[];
 }
 
 /**
