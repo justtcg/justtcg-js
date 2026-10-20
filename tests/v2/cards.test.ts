@@ -126,6 +126,13 @@ describe('v2 cards', () => {
       expect(url.searchParams.get('limit')).toBe('50');
     });
 
+    it('types order_by with the v2 enum, which has no 90d', async () => {
+      mockFetch({ data: [] });
+
+      // @ts-expect-error -- '90d' is a v1 sort; v2 documents price | 24h | 7d | 30d only.
+      await client.v2.cards.get({ game: 'pokemon', order_by: '90d' });
+    });
+
     it('exposes the cursor from the Link header', async () => {
       mockFetch(
         { data: [CARD] },
@@ -246,41 +253,68 @@ describe('v2 cards', () => {
   });
 
   describe('retrieve', () => {
-    it('looks up by card_id and unwraps the single card', async () => {
-      const fetchMock = mockFetch({ data: [CARD] });
+    it('calls the canonical GET /v2/cards/{id} and unwraps the documented single object', async () => {
+      const fetchMock = mockFetch({ data: CARD });
 
       const result = await client.v2.cards.retrieve(CARD.id, {
         graded: 'include',
-        regions: ['US'],
+        regions: ['NA'],
+        language: ['English'],
       });
 
       const url = calledUrl(fetchMock);
-      // Per the resolved contract question: the query-param form, not the path form.
-      expect(url.pathname).toBe('/v2/cards');
-      expect(url.searchParams.get('card_id')).toBe(CARD.id);
+      expect(url.pathname).toBe(`/v2/cards/${CARD.id}`);
+      expect(url.searchParams.has('card_id')).toBe(false);
       expect(url.searchParams.get('graded')).toBe('include');
-      // A single card, not an array — the endpoint always sends `{ data: [...] }`.
+      expect(url.searchParams.get('regions')).toBe('NA');
+      expect(url.searchParams.get('language')).toBe('English');
       expect(result.data.name).toBe('Charizard');
       expect(result.pagination).toBeUndefined();
       expect(result.usage.remaining).toBe(331644);
     });
 
+    it('also unwraps the one-element array the live API sends today', async () => {
+      mockFetch({ data: [CARD] });
+
+      const result = await client.v2.cards.retrieve(CARD.id);
+
+      expect(result.data.id).toBe(CARD.id);
+    });
+
     it('accepts a legacy v1 slug as the identifier', async () => {
-      const fetchMock = mockFetch({ data: [CARD] });
+      const fetchMock = mockFetch({ data: CARD });
 
       await client.v2.cards.retrieve('pokemon-base-set-charizard-4');
 
-      expect(calledUrl(fetchMock).searchParams.get('card_id')).toBe('pokemon-base-set-charizard-4');
+      expect(calledUrl(fetchMock).pathname).toBe('/v2/cards/pokemon-base-set-charizard-4');
     });
 
-    it('looks up by variant_id', async () => {
+    it('URL-encodes the identifier into the path', async () => {
+      const fetchMock = mockFetch({ data: CARD });
+
+      await client.v2.cards.retrieve('a/b?c#d');
+
+      const requested = fetchMock.mock.calls[0][0] as string;
+      expect(requested).toContain('/v2/cards/a%2Fb%3Fc%23d');
+      expect(calledUrl(fetchMock).search).toBe('');
+    });
+
+    it('looks up by variant_id on the list endpoint', async () => {
       const fetchMock = mockFetch({ data: [CARD] });
 
       await client.v2.cards.retrieveVariant('e72a67fe-922e-5662-bcfc-e8cb509f8220');
 
       const url = calledUrl(fetchMock);
+      expect(url.pathname).toBe('/v2/cards');
       expect(url.searchParams.get('variant_id')).toBe('e72a67fe-922e-5662-bcfc-e8cb509f8220');
       expect(url.searchParams.has('card_id')).toBe(false);
+    });
+
+    it('throws NotFoundError when retrieveVariant gets a 200 with an empty array', async () => {
+      mockFetch({ data: [] });
+
+      await expect(client.v2.cards.retrieveVariant('nope')).rejects.toThrow(NotFoundError);
+      await expect(client.v2.cards.retrieveVariant('nope')).rejects.toThrow(/nope/);
     });
 
     it('throws NotFoundError when a 200 carries an empty array', async () => {

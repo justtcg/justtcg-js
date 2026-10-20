@@ -12,7 +12,7 @@
  */
 
 import { QueryParams } from '../core/http-client';
-import { Condition, ConditionAbv, Order, OrderBy, CardLanguage } from './index';
+import { Condition, ConditionAbv, Order, CardLanguage } from './index';
 
 // --- regions ---------------------------------------------------------------------------------
 
@@ -34,15 +34,18 @@ export type V2CountryCode =
 export type V2RegionCode = V2MarketCode | V2CountryCode;
 
 /**
- * The regions that return data today. Every other valid code throws `RegionNotAvailableError`
- * until more regions come online.
+ * The regions that return data today: `NA` and its country code `US`, which serve the same USD
+ * prices. Every other valid code throws `RegionNotAvailableError` until more regions come online.
  */
 export const V2_SERVICEABLE_REGIONS = ['NA', 'US'] as const;
 
 /**
- * The region used when `regions` is omitted: `US` (a country code, USD), which reproduces v1's
- * pricing. Note that `markets[0].region` echoes back the code that was actually used, so a request
- * that omits `regions` gets a market entry with `region: "US"`, not `"NA"`.
+ * The region the API uses when `regions` is omitted, as echoed in `markets[0].region`.
+ *
+ * The docs and OpenAPI give the default as `NA`, but the live API (checked 2026-10-20) echoes
+ * `"US"` for a request without `regions`. The prices are identical either way: both are v1's USD
+ * pricing. Code that matches on the region should accept both, or pass `regions` explicitly so the
+ * echo is predictable (`regions: ['NA']` echoes `"NA"`).
  */
 export const V2_DEFAULT_REGION = 'US';
 
@@ -245,6 +248,13 @@ export type V2IncludeComponent =
   | `price_history.${V2PriceHistoryWindow}`;
 
 /**
+ * The fields v2 can sort by, always read from the primary market (`markets[0]`).
+ *
+ * Narrower than v1's `OrderBy`: v2 has no `90d` sort.
+ */
+export type V2OrderBy = 'price' | '24h' | '7d' | '30d';
+
+/**
  * The named parameters for `GET /v2/cards`.
  *
  * Note the casing: v2 uses snake_case for every identifier, filter, and sort param (`card_id`,
@@ -259,8 +269,8 @@ export interface V2CardsParams {
   /** Look up one variant directly. The fastest lookup. Accepts a UUID or a legacy slug. */
   variant_id?: string;
   /**
-   * Region codes in priority order; the first is your primary market. Defaults to
-   * {@link V2_DEFAULT_REGION}. Each region beyond the first adds to the request cost.
+   * Region codes in priority order; the first is your primary market. When omitted the API uses
+   * {@link V2_DEFAULT_REGION} (documented as `NA`; same prices either way). Each region beyond the first adds to the request cost.
    */
   regions?: readonly V2RegionCode[];
   /** Which kinds of variant to return. Defaults to `exclude` (raw only). */
@@ -293,10 +303,13 @@ export interface V2CardsParams {
   printing?: readonly string[];
   /** Only return cards priced at or above this value, read from the primary market. */
   min_price?: number;
-  /** Sort direction. Defaults to `desc`. */
+  /**
+   * Sort direction. Defaults to `desc`. The OpenAPI spec doesn't list it, but the live API still
+   * accepts and validates it.
+   */
   order?: Order;
   /** Field to sort by, applied to the primary market only. Defaults to `price`. */
-  order_by?: OrderBy;
+  order_by?: V2OrderBy;
   /** Results per page. Defaults to 20; the maximum depends on your plan. */
   limit?: number;
   /** The opaque pagination cursor from the previous response. Replaces v1's `offset`. */
@@ -311,6 +324,9 @@ export interface V2CardsParams {
    * `"Chinese (S)"`, `"Portuguese"`, `"Chinese (T)"`, `"Russian"`, `"Korean"`.
    *
    * Note: variants with `language: null` in the database resolve to `"English"`.
+   *
+   * Ignored for single-variant lookups (`variant_id` / `retrieveVariant`), which always return
+   * the one variant asked for.
    *
    * @example
    * client.v2.cards.get({ game: 'pokemon', language: ['Japanese'] })
@@ -391,11 +407,24 @@ export interface V2BatchOptions {
 
 // --- responses -------------------------------------------------------------------------------
 
-/** The raw `/v2/cards` response body. Always an array, including for direct lookups. */
+/**
+ * The raw `GET /v2/cards` and `POST /v2/cards` response body. Always an array, including for a
+ * `card_id`/`variant_id` lookup on the list endpoint.
+ */
 export interface V2CardsResponseBody {
   data: V2Card[];
   /** Pagination metadata. Present on browse/search responses; absent is treated as unknown. */
   meta?: V2PaginationMeta;
+}
+
+/**
+ * The raw `GET /v2/cards/{id}` response body. There is never a `meta`.
+ *
+ * The spec documents `data` as a single card. The live API still sends a one-element array, so the
+ * SDK accepts both.
+ */
+export interface V2CardResponseBody {
+  data: V2Card | V2Card[];
 }
 
 /** The raw `meta` object of a `/v2/cards` response body. */

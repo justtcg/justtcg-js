@@ -6,6 +6,7 @@ import {
   V2BatchLookupItem,
   V2BatchOptions,
   V2Card,
+  V2CardResponseBody,
   V2CardsResponseBody,
   V2RetrieveOptions,
   V2SearchOptions,
@@ -23,8 +24,8 @@ export class V2CardsResource extends V2BaseResource {
    * Retrieves cards matching a flexible set of query parameters.
    *
    * With no parameters this browses; with `q` or `number` it searches; with `card_id` or
-   * `variant_id` it looks up directly. Prefer {@link retrieve} for the last case — it unwraps the
-   * single result for you.
+   * `variant_id` it looks up directly. For a direct lookup prefer {@link retrieve} (which calls the
+   * canonical `GET /v2/cards/{id}`) or {@link retrieveVariant} — both unwrap the single result.
    * @param params Parameters for searching, filtering, and paginating cards.
    */
   public async get(params: GetV2CardsParams = {}): Promise<V2ApiResponse<V2Card[]>> {
@@ -106,18 +107,30 @@ export class V2CardsResource extends V2BaseResource {
   }
 
   /**
-   * Retrieves a single card by its ID.
+   * Retrieves a single card by its ID, via the canonical direct lookup `GET /v2/cards/{id}`.
    *
    * This is the only lookup that accepts `graded: 'include'`. The identifier may be either the v2
    * UUID or a legacy v1 slug, so an existing v1 card ID keeps working.
    * @param cardId The card's UUID or legacy slug.
    * @param options Optional parameters to shape the response.
+   * @throws {NotFoundError} When no card matches `cardId`.
    */
   public async retrieve(
     cardId: string,
     options?: V2RetrieveOptions,
   ): Promise<V2ApiResponse<V2Card>> {
-    return this.retrieveOne({ ...options, card_id: cardId });
+    const response = await this._get<V2CardResponseBody>(
+      `/cards/${encodeURIComponent(cardId)}`,
+      { ...options },
+    );
+    // The spec documents `data` as a single card, but the live API (2026-10-20) still sends a
+    // one-element array here, so accept both. The server 404s when nothing matches; the guard
+    // covers a success response with no card in it.
+    const { data } = response.body;
+    const card = Array.isArray(data) ? data[0] : data;
+    if (!card) throw notFound(cardId, response.status);
+
+    return { data: card, usage: parseV2Usage(response.headers) };
   }
 
   /**
@@ -132,7 +145,17 @@ export class V2CardsResource extends V2BaseResource {
     variantId: string,
     options?: V2RetrieveOptions,
   ): Promise<V2ApiResponse<V2Card>> {
-    return this.retrieveOne({ ...options, variant_id: variantId });
+    // There is no variant path, so this stays on the query-param form of the list endpoint.
+    const response = await this._get<V2CardsResponseBody>('/cards', {
+      ...options,
+      variant_id: variantId,
+    });
+    // `{ data: [...] }` even for a direct lookup. The server 404s when nothing matches; the
+    // empty-array guard is belt-and-braces against a success response with no card.
+    const card = response.body.data[0];
+    if (!card) throw notFound(variantId, response.status);
+
+    return { data: card, usage: parseV2Usage(response.headers) };
   }
 
   /**
@@ -157,24 +180,8 @@ export class V2CardsResource extends V2BaseResource {
     };
   }
 
-  /**
-   * Runs a direct lookup and unwraps the single card.
-   *
-   * The endpoint returns `{ data: [...] }` even for a direct lookup, and 404s when nothing matches;
-   * the empty-array guard is belt-and-braces against a response that reports success with no card.
-   */
-  private async retrieveOne(params: GetV2CardsParams): Promise<V2ApiResponse<V2Card>> {
-    const response = await this._get<V2CardsResponseBody>('/cards', params);
-    const card = response.body.data[0];
+}
 
-    if (!card) {
-      const identifier = params.card_id ?? params.variant_id;
-      throw new NotFoundError(`No card found for '${identifier}'.`, {
-        status: response.status,
-        code: 'not-found',
-      });
-    }
-
-    return { data: card, usage: parseV2Usage(response.headers) };
-  }
+function notFound(identifier: string, status: number): NotFoundError {
+  return new NotFoundError(`No card found for '${identifier}'.`, { status, code: 'not-found' });
 }

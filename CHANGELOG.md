@@ -21,6 +21,24 @@ All notable changes to this project are documented here. This project adheres to
 
 ### Fixed
 
+- **`client.v2.cards.retrieve()` now calls the canonical direct lookup `GET /v2/cards/{id}`**
+  instead of `GET /v2/cards?card_id=…`. The id is URL-encoded into the path. Its signature,
+  return type and `NotFoundError` behaviour are unchanged. The spec documents `data` as a single
+  card object, but the live API still sends a one-element array, so both shapes are accepted.
+  `retrieveVariant()` stays on `?variant_id=`, because there is no variant path.
+- **v2 `order_by` is typed as the new `V2OrderBy`** (`'price' | '24h' | '7d' | '30d'`), the enum
+  the v2 spec documents, instead of v1's `OrderBy`. A `'90d'` sort on v2 is now a type error. The
+  live API still accepts `90d`, but the spec does not, so it isn't supported. v1's `OrderBy` is
+  unchanged.
+- **v2 region docs now describe what the API actually does.** The docs and OpenAPI say `regions`
+  defaults to `NA`, but a request without `regions` is still echoed as `markets[0].region: "US"`
+  (checked live on 2026-10-20). `V2_DEFAULT_REGION` therefore stays `'US'`, and
+  `V2_SERVICEABLE_REGIONS` stays `['NA', 'US']`, the codes the API reports as live. The prices are
+  identical either way. Pass `regions: ['NA']` if your code matches on the region code.
+- The v2 `language` doc comment now notes that `language` is ignored for `variant_id` lookups.
+  `order` remains supported on v2: the spec no longer lists it, but the live API still validates
+  it and applies it.
+
 - **v2 errors now map the documented `problem+json` shape.** The spec gives `type` as a docs
   anchor (`https://justtcg.com/docs/errors#invalid-request`) plus a `code` member with the v1
   codes. The SDK used to read only the last path segment of `type`, so documented bodies all fell

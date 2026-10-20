@@ -411,8 +411,8 @@ await client.v2.cards.get({ game: 'pokemon', regions: ['US'], limit: 20 });
 // Search by name
 await client.v2.cards.search('pikachu', { game: 'pokemon' });
 
-// Direct lookup — accepts a v2 UUID or a legacy v1 slug, and unwraps the single card.
-// This is the only lookup that accepts graded: 'include'.
+// Direct lookup (GET /v2/cards/{id}) — accepts a v2 UUID or a legacy v1 slug, and unwraps the
+// single card. This is the only lookup that accepts graded: 'include'.
 await client.v2.cards.retrieve('907005b3-b7bd-5eac-aed9-d20454b7fe8a');
 await client.v2.cards.retrieveVariant('e72a67fe-922e-5662-bcfc-e8cb509f8220');
 
@@ -470,9 +470,9 @@ const multiLangCards = await client.v2.cards.get({
 });
 ```
 
-The same `language` parameter is available on `v2.cards.search()`, `v2.cards.retrieve()`, and `v1.cards.get()` / `v1.cards.search()`.
+The same `language` parameter is available on `v2.cards.search()`, `v2.cards.retrieve()`, and `v1.cards.get()` / `v1.cards.search()`. It is ignored by `v2.cards.retrieveVariant()`, which always returns the one variant you asked for.
 
-Omitting `regions` yields a single `US` market (USD), reproducing v1's pricing. Extra regions and `graded: 'include'` carry a cost surcharge; exact figures are set at launch.
+Only `NA` (or its country code `US`) returns data today; any other region throws `RegionNotAvailableError`. Omitting `regions` gives a single USD market with v1's pricing. The docs call that default `NA`, but the live API currently echoes it as `region: 'US'`, so pass `regions: ['NA']` if your code matches on the region code. Extra regions and `graded: 'include'` carry a cost surcharge; exact figures are set at launch.
 
 ### Migrating without rewriting your types
 
