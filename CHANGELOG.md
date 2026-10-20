@@ -74,6 +74,28 @@ All notable changes to this project are documented here. This project adheres to
   v1's `priceChangesCount*` exactly, which is what the compat adapters already map it to. The
   `V2Period` docs also list which fields each window carries.
 
+- **`client.v2.cards.getByBatch` now matches the documented `POST /v2/cards`**
+  ([v2 batch](https://justtcg.com/docs/api/cards-v2/batch), API changelog 2026-10-12).
+  - `V2BatchOptions` gains `include` and `updated_after`. Both are sent on the query string with
+    `regions` and apply to the whole batch. Before this the SDK sent only `regions`, so there was
+    no way to shape a batch response or ask for incremental updates. A per-item `updated_after`
+    gets a `400` from the API.
+  - The response's `meta.count` is exposed as `pagination.count` (`hasMore` is always `false`).
+    It counts the returned **cards**, not the items sent: unmatched items are dropped without an
+    error, duplicates collapse, and variants of one card are grouped under it. Check
+    completeness by comparing the returned IDs, not counts. `pagination` stays absent when the
+    body has no `meta`.
+  - Docs: the identifier precedence (`variant_id` > `tcgplayer_sku_id` > `tcgplayer_id` >
+    `mtgjson_id` > `scryfall_id` > `card_id`), the per-plan item limit, and the graded rule (a
+    graded variant comes back only when it is priced and named by `variant_id`; `graded`,
+    `grading_company` and `grade` are not accepted).
+  - `V2BatchLookupItem.include_price_history` and `price_history_duration` are not in the v2
+    batch docs, but a live check (2026-10-20) shows the API still honours them per item, so they
+    stay and are not deprecated. Their docs now say so and recommend `options.include`. A per-item
+    `price_history_duration` overrides the window of a request-wide
+    `include: ['price_history.<window>']`, but cannot bring history back when `include` leaves
+    `price_history` out.
+
 ## [0.4.0] - 2026-08-06
 
 ### Changed (breaking, v2 only)

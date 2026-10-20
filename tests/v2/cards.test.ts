@@ -356,9 +356,58 @@ describe('v2 cards', () => {
         { card_id: CARD.id, condition: ['Near Mint'] },
         { tcgplayer_id: '42' },
       ]);
-      // Batch responses are never paginated.
+      // No `meta` in the body, so there is no count to report.
       expect(result.pagination).toBeUndefined();
       expect(result.usage.limit).toBe(500000);
+    });
+
+    it('sends include, updated_after and regions on the query string, never in the body', async () => {
+      const fetchMock = mockFetch({ data: [] });
+      const items = [
+        { card_id: CARD.id, condition: ['NM' as const], printing: ['Holofoil'] },
+        { variant_id: CARD.variants[0].id },
+        { tcgplayer_sku_id: '12345' },
+        { tcgplayer_id: '42' },
+        { mtgjson_id: 'mtgjson-1' },
+        { scryfall_id: 'scryfall-1' },
+      ];
+
+      await client.v2.cards.getByBatch(items, {
+        include: ['periods.30d', 'price_history.90d'],
+        updated_after: 1_763_000_000,
+        regions: ['US'],
+      });
+
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      const params = new URL(url).searchParams;
+      expect(params.get('include')).toBe('periods.30d,price_history.90d');
+      expect(params.get('updated_after')).toBe('1763000000');
+      expect(params.get('regions')).toBe('US');
+      expect([...params.keys()].sort()).toEqual(['include', 'regions', 'updated_after']);
+      // Items go out exactly as given: snake_case keys, arrays left as arrays, no request-wide keys.
+      expect(JSON.parse(init.body as string)).toEqual(items);
+    });
+
+    it('omits options that are not set', async () => {
+      const fetchMock = mockFetch({ data: [] });
+
+      await client.v2.cards.getByBatch([{ card_id: CARD.id }], { include: ['periods'] });
+
+      expect(calledUrl(fetchMock).search).toBe('?include=periods');
+    });
+
+    it('exposes meta.count as pagination.count, counting cards rather than items', async () => {
+      mockFetch({ data: [CARD], meta: { count: 1 } });
+
+      // Two items naming variants of the same card, plus one that matches nothing.
+      const result = await client.v2.cards.getByBatch([
+        { card_id: CARD.id },
+        { variant_id: CARD.variants[0].id },
+        { tcgplayer_id: 'no-such-product' },
+      ]);
+
+      expect(result.pagination).toEqual({ hasMore: false, count: 1 });
+      expect(result.data.map((card) => card.id)).toEqual([CARD.id]);
     });
 
     it('omits regions entirely when no options are given', async () => {

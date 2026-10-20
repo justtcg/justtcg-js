@@ -374,7 +374,15 @@ export type V2RetrieveOptions = Omit<
  * As of 2026-07-29 the body grammar is snake_case, matching every other v2 param — this reversed
  * an earlier decision to keep v1's camelCase keys for zero-change migration. A body built against
  * the pre-2026-07-29 shape (`cardId`, `tcgplayerId`, …) will no longer resolve any identifier and
- * the API 400s. Batch always returns raw variants; graded is direct-only.
+ * the API 400s.
+ *
+ * Each item must name at least one identifier. When it names several, the most specific wins:
+ * `variant_id`, `tcgplayer_sku_id`, `tcgplayer_id`, `mtgjson_id`, `scryfall_id`, `card_id`.
+ *
+ * Request-wide parameters (`include`, `updated_after`, `regions`) belong in {@link V2BatchOptions},
+ * not on an item — a per-item `updated_after` is rejected with a `400`. Batch does not accept
+ * `graded`, `grading_company` or `grade`: a graded variant comes back only when it already has a
+ * price and is named by `variant_id`. Use a direct lookup to request a specific grade.
  */
 export interface V2BatchLookupItem {
   /** A TCGplayer product ID. */
@@ -393,16 +401,41 @@ export interface V2BatchLookupItem {
   printing?: string[];
   /** Filter to these conditions. */
   condition?: (Condition | ConditionAbv)[];
-  /** Whether to include price history for this item. */
+  /**
+   * Whether to include price history for this item. `false` returns an empty `price_history`.
+   *
+   * Not part of the documented v2 batch body, but still honoured by the API (checked live
+   * 2026-10-20). Prefer `include` in {@link V2BatchOptions}, which applies to the whole batch.
+   */
   include_price_history?: boolean;
-  /** The price-history window for this item. */
+  /**
+   * The price-history window for this item. Overrides the window of a request-wide
+   * `include: ['price_history.<window>']`, but cannot bring history back when the request-wide
+   * `include` leaves `price_history` out.
+   *
+   * Not part of the documented v2 batch body, but still honoured by the API (checked live
+   * 2026-10-20). Prefer `include` in {@link V2BatchOptions}, e.g. `['price_history.90d']`.
+   */
   price_history_duration?: V2PriceHistoryWindow;
 }
 
-/** Options for a v2 batch request. `regions` is sent as a query parameter, never per item. */
+/**
+ * Options for a v2 batch request. Every field is sent on the query string and applies to the whole
+ * batch, never per item.
+ */
 export interface V2BatchOptions {
   /** Region codes in priority order. Defaults to {@link V2_DEFAULT_REGION}. */
   regions?: readonly V2RegionCode[];
+  /**
+   * Which components to expand on every returned card. Replaces the default set entirely, as on
+   * `GET /v2/cards`.
+   */
+  include?: readonly V2IncludeComponent[];
+  /**
+   * Only return variants updated after this Unix timestamp (seconds). Must be set here rather than
+   * per item; a per-item `updated_after` is rejected with a `400`.
+   */
+  updated_after?: number;
 }
 
 // --- responses -------------------------------------------------------------------------------
@@ -490,7 +523,10 @@ export interface V2UsageMeta {
 export interface V2ApiResponse<T> {
   /** The main data payload. */
   data: T;
-  /** Cursor pagination, present for browse and search responses. */
+  /**
+   * Cursor pagination, present for browse and search responses. On a batch response only `count`
+   * is set (and `hasMore` is always `false`).
+   */
   pagination?: V2Pagination;
   /** API usage, from the response headers. */
   usage: V2UsageMeta;

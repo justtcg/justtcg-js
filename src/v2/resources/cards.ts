@@ -162,20 +162,34 @@ export class V2CardsResource extends V2BaseResource {
    * Retrieves cards matching a batch of specific identifiers.
    *
    * The body grammar is snake_case (`card_id`, `tcgplayer_id`, …), matching every other v2 param —
-   * a v1 batch payload is **not** accepted as-is and needs its keys renamed. Batch responses are
-   * never paginated, and always contain raw variants only.
+   * a v1 batch payload is **not** accepted as-is and needs its keys renamed. The maximum number of
+   * items is your plan's per-request limit, the same as v1's batch.
+   *
+   * The response is one entry per **card**, not per item: variants of the same card are grouped
+   * under it, duplicate items collapse, and items that match nothing are dropped without an
+   * error. `pagination.count` (from `meta.count`) counts the returned cards, so it is not a
+   * completeness check — compare the IDs in `data` against the identifiers you sent instead.
+   * There are no cursors: a batch is always a single page.
+   *
+   * Graded variants come back only when they already have a price and are named by `variant_id`;
+   * batch does not accept `graded`, `grading_company` or `grade`.
    * @param items An array of objects, each identifying a card to look up.
-   * @param options Request-wide options; `regions` applies to every item.
+   * @param options Request-wide options — `include`, `updated_after` and `regions` — sent on the
+   *   query string and applied to every item.
    */
   public async getByBatch(
     items: V2BatchLookupItem[],
     options?: V2BatchOptions,
   ): Promise<V2ApiResponse<V2Card[]>> {
     const response = await this._post<V2CardsResponseBody>('/cards', items, {
+      include: options?.include,
+      updated_after: options?.updated_after,
       regions: options?.regions,
     });
+    const count = response.body.meta?.count;
     return {
       data: response.body.data,
+      ...(count !== undefined && { pagination: { hasMore: false, count } }),
       usage: parseV2Usage(response.headers),
     };
   }
