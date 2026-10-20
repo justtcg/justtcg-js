@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { toV1Card, toV1Cards, toV1Variant, V1_PERIOD_FIELDS } from '../../src/v2/compat';
 import type { Card, Variant } from '../../src/types';
-import type { V2Card, V2Variant } from '../../src/types/v2';
+import type { V2Card, V2Market, V2Variant } from '../../src/types/v2';
 
 /**
  * A matched pair for the same card: the v2 payload, and the v1 payload the old endpoint produced
@@ -34,6 +34,8 @@ const V2: V2Card = {
           region: 'US',
           currency: 'USD',
           price: 420.69,
+          price_status: 'current',
+          last_price: null,
           updated_at: 1_763_000_000,
           change_24h_pct: 2.5,
           periods: {
@@ -117,6 +119,8 @@ const V1: Card = {
       tcgplayerSkuId: '12345',
       price: 420.69,
       lastUpdated: 1_763_000_000,
+      priceStatus: 'current',
+      lastKnownPrice: null,
       priceChange24hr: 2.5,
       priceHistory: [
         { t: 1_762_900_000, p: 415.0 },
@@ -187,6 +191,8 @@ const GRADED: V2Variant = {
       region: 'US',
       currency: 'USD',
       price: 99_000,
+      price_status: 'current',
+      last_price: null,
       updated_at: 1_763_000_000,
       change_24h_pct: null,
       periods: {},
@@ -327,6 +333,8 @@ describe('toV1Card regions', () => {
             region: 'EU',
             currency: 'EUR',
             price: 389.0,
+            price_status: 'current',
+            last_price: null,
             updated_at: 1_762_000_000,
             change_24h_pct: -1.1,
             periods: { '7d': { avg: 392.0 } },
@@ -361,7 +369,104 @@ describe('toV1Card regions', () => {
     expect(variant.price).toBeNull();
     expect(variant.lastUpdated).toBeNull();
     expect(variant.priceHistory).toBeNull();
+    expect(variant.priceStatus).toBe('unpriced');
+    expect(variant.lastKnownPrice).toBeNull();
     expect('avgPrice' in variant).toBe(false);
+  });
+});
+
+describe('toV1Variant price status', () => {
+  it('maps an expired market to priceStatus and lastKnownPrice', () => {
+    const variant = toV1Variant({
+      ...V2.variants[0],
+      markets: [
+        {
+          ...V2.variants[0].markets[0],
+          price: null,
+          price_status: 'expired',
+          last_price: 4400.43,
+          // An expiry leaves the last-observed timestamp, history and stats alone.
+          updated_at: 1_762_000_000,
+        },
+      ],
+    });
+
+    expect(variant.price).toBeNull();
+    expect(variant.priceStatus).toBe('expired');
+    expect(variant.lastKnownPrice).toBe(4400.43);
+    expect(variant.lastUpdated).toBe(1_762_000_000);
+    expect(variant.priceHistory).toEqual(V1.variants[0].priceHistory);
+    expect(variant.avgPrice).toBe(410.5);
+  });
+
+  it('maps an unpriced market', () => {
+    const variant = toV1Variant({
+      ...V2.variants[0],
+      markets: [
+        {
+          ...V2.variants[0].markets[0],
+          price: null,
+          price_status: 'unpriced',
+          last_price: null,
+          updated_at: null,
+          price_history: [],
+          periods: {},
+        },
+      ],
+    });
+
+    expect(variant.price).toBeNull();
+    expect(variant.lastUpdated).toBeNull();
+    expect(variant.priceStatus).toBe('unpriced');
+    expect(variant.lastKnownPrice).toBeNull();
+  });
+
+  it('reads the status of the selected region, not the primary one', () => {
+    const variant = toV1Variant(
+      {
+        ...V2.variants[0],
+        markets: [
+          V2.variants[0].markets[0],
+          {
+            ...V2.variants[0].markets[0],
+            region: 'EU',
+            currency: 'EUR',
+            price: null,
+            price_status: 'expired',
+            last_price: 389.0,
+          },
+        ],
+      },
+      { region: 'EU' },
+    );
+
+    expect(variant.priceStatus).toBe('expired');
+    expect(variant.lastKnownPrice).toBe(389.0);
+  });
+
+  it('keeps a graded variant current', () => {
+    const variant = toV1Variant(GRADED);
+
+    expect(variant.priceStatus).toBe('current');
+    expect(variant.lastKnownPrice).toBeNull();
+  });
+
+  it('derives a status for a recorded payload that predates price_status', () => {
+    const legacy: Partial<V2Market> = { ...V2.variants[0].markets[0] };
+    delete legacy.price_status;
+    delete legacy.last_price;
+    const priced = toV1Variant({
+      ...V2.variants[0],
+      markets: [legacy as V2Market],
+    });
+    const unpriced = toV1Variant({
+      ...V2.variants[0],
+      markets: [{ ...legacy, price: null } as V2Market],
+    });
+
+    expect(priced.priceStatus).toBe('current');
+    expect(priced.lastKnownPrice).toBeNull();
+    expect(unpriced.priceStatus).toBe('unpriced');
   });
 });
 
@@ -389,6 +494,7 @@ describe('toV1Variant edge cases', () => {
     const variant = toV1Variant({ ...V2.variants[0], markets: [] });
 
     expect(variant.price).toBeNull();
+    expect(variant.priceStatus).toBe('unpriced');
     expect(variant.priceChange24hr).toBeNull();
     expect(variant.priceHistory).toBeNull();
     expect(variant.id).toBe('pokemon-base-set-charizard-4_near-mint');

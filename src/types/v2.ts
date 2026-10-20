@@ -12,7 +12,7 @@
  */
 
 import { QueryParams } from '../core/http-client';
-import { Condition, ConditionAbv, Order, CardLanguage } from './index';
+import { Condition, ConditionAbv, Order, CardLanguage, PriceStatus } from './index';
 
 // --- regions ---------------------------------------------------------------------------------
 
@@ -163,9 +163,26 @@ export interface V2Market {
   region: string;
   /** ISO 4217 currency of `price` and every `periods` value. */
   currency: string;
-  /** The observed price in this region. `null` means no local data — never a converted price. */
+  /**
+   * The observed price in this region. `null` means no current local market report — never a
+   * converted price. `price_status` says why.
+   */
   price: number | null;
-  /** When `price` was last observed, as a Unix timestamp in seconds. */
+  /**
+   * Why `price` is what it is: `'current'`, `'expired'` (the last price aged out, see `last_price`)
+   * or `'unpriced'` (never priced). Graded variants are only ever `'current'` or `'unpriced'`.
+   * v1: `priceStatus`. See https://justtcg.com/docs/thin-markets.
+   */
+  price_status: PriceStatus;
+  /**
+   * The last observed price, in `currency`, when `price_status` is `'expired'`; `null` otherwise.
+   * v1: `lastKnownPrice`.
+   */
+  last_price: number | null;
+  /**
+   * When `price` was last observed, as a Unix timestamp in seconds. For an expired market this is
+   * when the last price was seen.
+   */
   updated_at: number | null;
   /** Percent change over the last 24 hours in this region. v1: `priceChange24hr`. */
   change_24h_pct: number | null;
@@ -295,7 +312,12 @@ export interface V2CardsParams {
   set?: string;
   /** Filter by card number within the set. */
   number?: string;
-  /** Only return variants updated after this Unix timestamp (seconds). Cannot be combined with `q`. */
+  /**
+   * Only return variants updated after this Unix timestamp (seconds). Cannot be combined with `q`.
+   *
+   * A price expiry counts as an update, so an expired market is returned once with a `null` `price`
+   * and `price_status: 'expired'`.
+   */
   updated_after?: number;
   /** Filter to these conditions. */
   condition?: readonly (Condition | ConditionAbv)[];

@@ -21,6 +21,7 @@ async function main() {
       order: 'desc',
       limit: 50,
     })) {
+      // A null price (expired or never priced) is treated as below the cut-off.
       const price = card.variants[0]?.markets[0]?.price ?? 0;
       if (price < 100) break; // sorted desc, so the first sub-$100 card ends the useful range
 

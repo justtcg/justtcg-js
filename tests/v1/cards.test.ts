@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, Mocked } from 'vitest';
-import { BatchLookupItem, GetCardsParams, JustTCG, SearchCardsOptions } from '../../src/index';
+import { BatchLookupItem, GetCardsParams, JustTCG, SearchCardsOptions, Variant } from '../../src/index';
 import { HttpClient } from '../../src/core/http-client';
 
 // Mock the entire HttpClient module
@@ -55,6 +55,46 @@ describe('CardsResource', () => {
 
       // Assert
       expect(mockedHttpClient.get).toHaveBeenCalledWith('/v1/cards', params);
+    });
+
+    it('passes an expired variant through with a null price and its last known price', async () => {
+      // Arrange: `updated_after` returns an expired variant once, with a null price.
+      const params: GetCardsParams = { game: 'pokemon', updated_after: 1_782_000_000 };
+      const expired: Variant = {
+        id: 'one-piece-card_near-mint_foil',
+        uuid: '7f6d4c1e-0000-4000-8000-000000000001',
+        condition: 'Near Mint',
+        printing: 'Foil',
+        language: 'English',
+        price: null,
+        lastUpdated: 1_782_360_444,
+        priceStatus: 'expired',
+        lastKnownPrice: 4400.43,
+      };
+      const unpriced: Variant = {
+        ...expired,
+        id: 'one-piece-card_damaged_foil',
+        condition: 'Damaged',
+        lastUpdated: null,
+        priceStatus: 'unpriced',
+        lastKnownPrice: null,
+      };
+      mockedHttpClient.get.mockResolvedValue({
+        data: [{ id: 'card-1', name: 'Card', game: 'one-piece', set: 'op01', variants: [expired, unpriced] }],
+        _metadata: { apiPlan: 'Free Tier' },
+      });
+
+      // Act
+      const result = await client.v1.cards.get(params);
+
+      // Assert
+      const [first, second] = result.data[0].variants;
+      expect(first.price).toBeNull();
+      expect(first.priceStatus).toBe('expired');
+      expect(first.lastKnownPrice).toBe(4400.43);
+      expect(first.lastUpdated).toBe(1_782_360_444);
+      expect(second.priceStatus).toBe('unpriced');
+      expect(second.lastUpdated).toBeNull();
     });
   });
 

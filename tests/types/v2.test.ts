@@ -91,6 +91,8 @@ describe('v2 types', () => {
               region: 'US',
               currency: 'USD',
               price: 12345.67,
+              price_status: 'current',
+              last_price: null,
               updated_at: 1_763_000_000,
               change_24h_pct: -1.5,
               // Only the requested window is present — absent is not null.

@@ -270,6 +270,11 @@ async function pollForUpdatedCards() {
           // - Compare them against a local cache and apply business logic
           // This example only shows a count because the processing needs are
           // project-specific.
+          //
+          // Note: a price expiry counts as an update, so `updated_after` returns an
+          // expired variant once with `price: null` (and `priceStatus: 'expired'`,
+          // `lastKnownPrice` set). Handle null prices here instead of assuming
+          // every returned price is a number.
         }
       } else {
         // keep action=none and fetchedCountForPoll=0

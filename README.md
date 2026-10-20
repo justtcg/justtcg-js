@@ -300,10 +300,14 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
   language: string | null;
   /** The TCGPlayer SKU of the specific variant, if available. */
   tcgplayerSkuId?: string;
-  /** The current price of the card variant in dollars. */
-  price: number;
-  /** The last time the price was updated, as an epoch timestamp in seconds. */
-  lastUpdated: number; // Epoch seconds
+  /** The current price in dollars. `null` when there is no current market report. */
+  price: number | null;
+  /** When the price was last observed, as an epoch timestamp in seconds. */
+  lastUpdated: number | null; // Epoch seconds
+  /** 'current' | 'expired' | 'unpriced' — why `price` is what it is. */
+  priceStatus: PriceStatus;
+  /** The price that expired, when `priceStatus` is 'expired'; `null` otherwise. */
+  lastKnownPrice: number | null;
   /** The percentage change in price over the last 24 hours. */
   priceChange24hr?: number | null; // Percentage
 
@@ -350,13 +354,22 @@ The `get()` and `getByBatch()` methods return an array of `Card` objects. Each c
   minPrice1y?: number | null;
   maxPrice1y?: number | null;
 
-  // --- All-time stats ---
+  // --- All-time stats (since tracking began, March 2025) ---
   minPriceAllTime?: number | null;
-  minPriceAllTimeDate?: string | null;
+  minPriceAllTimeDate?: string | null; // when the low was first reached
   maxPriceAllTime?: number | null;
-  maxPriceAllTimeDate?: string | null;
+  maxPriceAllTimeDate?: string | null; // when the high was first reached
 }
 ```
+
+**Null prices and `priceStatus`:** `price` can be `null`. `priceStatus` tells you why:
+`'unpriced'` means the condition has never had a price, and `'expired'` means the market stopped
+reporting it. A price expires after 14 days without a report if it is $100 or more, or if it has
+collapsed below 10% of the variant's recent median. The value that expired stays in
+`lastKnownPrice`, and price history and statistics are untouched. An expiry counts as an update,
+so `updated_after` returns the expired variant once with a `null` price. Handle `null` rather than
+treating it as `$0`. In v2 the same fields are `markets[].price_status` and `markets[].last_price`.
+See [Thin markets and price expiry](https://justtcg.com/docs/thin-markets).
 
 **`PriceHistoryEntry` Object:**
 ```typescript

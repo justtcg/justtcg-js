@@ -42,7 +42,14 @@ class InventoryManager {
 
         if (card) {
           const variant = card.variants.find(v => v.id === item.variantId);
-          const currentPrice = variant?.price ?? 0;
+          // `price` is null when the variant has no current market report. Don't value it at $0 —
+          // that would book a false loss. `priceStatus` says why (`expired` keeps `lastKnownPrice`).
+          if (variant?.price == null) {
+            const lastKnown = variant?.lastKnownPrice != null ? `, last known $${variant.lastKnownPrice.toFixed(2)}` : '';
+            console.log(`${card.name.padEnd(20)} | ${variant?.condition!.padEnd(10)} | no current price (${variant?.priceStatus ?? 'unknown'}${lastKnown})`);
+            continue;
+          }
+          const currentPrice = variant.price;
           const itemValue = currentPrice * item.quantity;
           const gainLoss = (currentPrice - item.purchasePrice) * item.quantity;
 

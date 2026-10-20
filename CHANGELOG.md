@@ -5,7 +5,34 @@ All notable changes to this project are documented here. This project adheres to
 
 ## [Unreleased]
 
+### Changed (breaking, TypeScript types only)
+
+- **v1 `Variant.price` and `Variant.lastUpdated` are now `number | null`.** The API has always been
+  able to send `null` for both. Since 2026-10-01 it does so routinely, because thin-market prices
+  now expire (see below). Code that does arithmetic on or sorts by `price` now needs a null check,
+  and the compiler will flag it. Runtime behaviour is unchanged: the SDK passes the wire value
+  through as before.
+
 ### Added
+
+- **Price status and last known price** ([thin markets](https://justtcg.com/docs/thin-markets)).
+  A price expires to `null` after 14 days without a market report if it is $100 or more, or if it
+  collapsed below 10% of the variant's 180-day median. Price history and statistics are never
+  changed by an expiry.
+  - New exported type `PriceStatus = 'current' | 'expired' | 'unpriced'`.
+  - v1 `Variant` gains `priceStatus` and `lastKnownPrice`, the value that expired (`null` unless
+    `expired`).
+  - v2 `V2Market` gains `price_status` and `last_price`. Graded variants are only ever `current`
+    or `unpriced`.
+  - `toV1Variant` / `toV1Card` map `price_status` → `priceStatus` and `last_price` →
+    `lastKnownPrice`. A missing market for the requested region reports `unpriced`. The
+    `as number` casts on `price` / `lastUpdated` are gone.
+  - Docs: `updated_after` (v1 and v2) now notes that an expiry counts as an update, so an expired
+    variant is returned once with a `null` price even without `include_null_prices`. The v1
+    `minPriceAllTime` / `maxPriceAllTime` fields are documented as covering all history since
+    March 2025 (API change of 2026-10-12), with `*Date` giving when the extreme was first reached.
+  - Examples no longer treat a `null` price as `$0`: the inventory report skips the valuation and
+    the price alert does not fire.
 
 - **`SubscriptionRequiredError`** (extends `AuthenticationError`) for `403 SUBSCRIPTION_REQUIRED`,
   returned when an API key is valid but its plan is not active. `reactivateUrl` carries

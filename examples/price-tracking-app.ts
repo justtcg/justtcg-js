@@ -31,9 +31,14 @@ class PriceTracker {
         if (response.data.length > 0) {
           const card = response.data[0];
           const topVariant = card.variants.sort((a, b) => (b.price ?? 0) - (a.price ?? 0))[0];
-          const currentPrice = topVariant?.price ?? 0;
+          const currentPrice = topVariant?.price;
 
-          if (this.shouldAlert(alert, currentPrice)) {
+          // A null price means no current market report (expired or never priced), not $0 —
+          // skip it rather than firing a false "below" alert.
+          if (currentPrice == null) {
+            console.log(`No current price for ${card.name} (${topVariant?.priceStatus ?? 'no variants'}).`);
+          }
+          else if (this.shouldAlert(alert, currentPrice)) {
             this.sendAlert(alert, card.name, currentPrice);
           }
           else {

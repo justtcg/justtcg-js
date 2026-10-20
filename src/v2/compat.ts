@@ -107,10 +107,15 @@ function selectMarket(markets: V2Market[], region?: string): V2Market | undefine
 /**
  * Converts a single v2 variant to the v1 shape.
  *
- * A note on nullability: v1's {@link Variant} declares `price`, `lastUpdated`, `condition`, and
- * `printing` as non-nullable, but the v1 endpoint has always been able to send `null` for all four.
- * This adapter mirrors the wire rather than inventing placeholder values, so those fields are cast
- * — a `0` price would be indistinguishable from a real one.
+ * A note on nullability: `price` and `lastUpdated` are `null` whenever the selected market has no
+ * current price (or the card has no entry for the requested region), exactly as v1 sends them —
+ * this adapter never invents a placeholder, since a `0` price would be indistinguishable from a real
+ * one. v1's {@link Variant} still declares `condition` and `printing` as non-nullable, but the v1
+ * endpoint has always been able to send `null` for both, so those two are cast.
+ *
+ * `price_status` and `last_price` map to `priceStatus` and `lastKnownPrice`. When there is no market
+ * to flatten, the variant is reported as `'unpriced'` in that region. A recorded payload from before
+ * the API sent `price_status` gets `'current'` or `'unpriced'` from whether it has a price.
  *
  * @param variant The v2 variant.
  * @param options Which market to flatten. See {@link ToV1Options}.
@@ -124,8 +129,10 @@ export function toV1Variant(variant: V2Variant, options: ToV1Options = {}): Vari
     condition: (variant.condition ?? variant.grading?.canonical ?? null) as Condition,
     printing: variant.printing as string,
     language: variant.language,
-    price: (market?.price ?? null) as number,
-    lastUpdated: (market?.updated_at ?? null) as number,
+    price: market?.price ?? null,
+    lastUpdated: market?.updated_at ?? null,
+    priceStatus: market?.price_status ?? (market?.price != null ? 'current' : 'unpriced'),
+    lastKnownPrice: market?.last_price ?? null,
     priceChange24hr: market?.change_24h_pct ?? null,
     priceHistory: market?.price_history ?? null,
   };

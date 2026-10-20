@@ -34,6 +34,8 @@ const CARD: V2Card = {
           region: 'US',
           currency: 'USD',
           price: 420.69,
+          price_status: 'current',
+          last_price: null,
           updated_at: 1_763_000_000,
           change_24h_pct: 2.5,
           periods: { '7d': { avg: 410, min: 400, max: 430 } },

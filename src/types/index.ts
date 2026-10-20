@@ -129,7 +129,12 @@ export interface GetCardsParams extends QueryParams {
   set?: string;
   /** The number of the card (e.g. 015'). */
   number?: string;
-  /** Updated after a specific date in Unix timestamp format (seconds since epoch). */
+  /**
+   * Updated after a specific date in Unix timestamp format (seconds since epoch).
+   *
+   * A price expiry counts as an update, so this returns an expired variant once with a `null`
+   * `price` (`priceStatus: 'expired'`), even without `include_null_prices`.
+   */
   updated_after?: number;
   /** An array of card conditions to filter by (e.g., ['Near Mint', 'Lightly Played']). */
   condition?: (Condition | ConditionAbv)[];
@@ -191,7 +196,12 @@ export interface BatchLookupItem {
   scryfallId?: string;
   /** The MTGJSON ID of the card. */
   mtgjsonId?: string;
-  /** Updated after a specific date in Unix timestamp format (seconds since epoch). */
+  /**
+   * Updated after a specific date in Unix timestamp format (seconds since epoch).
+   *
+   * A price expiry counts as an update, so this returns an expired variant once with a `null`
+   * `price` (`priceStatus: 'expired'`), even without `include_null_prices`.
+   */
   updated_after?: number;
   /** An array of card print types to filter by. */
   printing?: string[];
@@ -306,6 +316,21 @@ export interface JustTCGApiResponse<T> {
 }
 
 /**
+ * Why a variant's price is what it is.
+ *
+ * - `'current'`: a market report is in effect.
+ * - `'expired'`: the market stopped reporting the variant and the last price aged out, so the price
+ *   is `null` and the last observed value is carried alongside it. A price expires after 14 days
+ *   without a report if it is $100 or more, or if it collapsed below 10% of the variant's 180-day
+ *   median. Price history and statistics are never changed by an expiry. Graded variants never
+ *   expire.
+ * - `'unpriced'`: this condition has never had a price.
+ *
+ * See https://justtcg.com/docs/thin-markets.
+ */
+export type PriceStatus = 'current' | 'expired' | 'unpriced';
+
+/**
  * A single entry in a variant's price history.
  */
 export interface PriceHistoryEntry {
@@ -332,10 +357,27 @@ export interface Variant {
   language: string | null;
   /** The TCGPlayer SKU of the specific variant. */
   tcgplayerSkuId?: string;
-  /** The current price of the card variant in dollars. */
-  price: number;
-  /** The last time the price was updated, as an epoch timestamp in seconds. */
-  lastUpdated: number; // Epoch seconds
+  /**
+   * The current price of the card variant in dollars: the last price the market reported for this
+   * condition. `null` when there is no current market report — {@link Variant.priceStatus} says why.
+   */
+  price: number | null;
+  /**
+   * When the price was last observed, as an epoch timestamp in seconds. For an expired variant this
+   * is when the last price was seen; `null` if the variant has never been priced.
+   */
+  lastUpdated: number | null; // Epoch seconds
+  /**
+   * Why `price` is what it is. `'expired'` means the market stopped reporting this variant and the
+   * last price aged out, so `price` is `null` and {@link Variant.lastKnownPrice} carries it.
+   * See {@link PriceStatus} and https://justtcg.com/docs/thin-markets.
+   */
+  priceStatus: PriceStatus;
+  /**
+   * The last observed price in dollars when `priceStatus` is `'expired'`; `null` otherwise. It is
+   * also the last point of the variant's price history.
+   */
+  lastKnownPrice: number | null;
   /** The percentage change in price over the last 24 hours. */
   priceChange24hr?: number | null; // Percentage
 
@@ -383,9 +425,13 @@ export interface Variant {
   maxPrice1y?: number | null;
 
   // --- All-time stats ---
+  /** Lowest price recorded for this variant since tracking began (March 2025). */
   minPriceAllTime?: number | null;
+  /** ISO 8601 timestamp of when the all-time minimum was first reached. */
   minPriceAllTimeDate?: string | null;
+  /** Highest price recorded for this variant since tracking began (March 2025). */
   maxPriceAllTime?: number | null;
+  /** ISO 8601 timestamp of when the all-time maximum was first reached. */
   maxPriceAllTimeDate?: string | null;
 }
 
