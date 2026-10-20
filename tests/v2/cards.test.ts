@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JustTCG } from '../../src/index';
 import { NotFoundError, RegionNotAvailableError, ValidationError } from '../../src/errors';
-import type { V2Card } from '../../src/types/v2';
+import type {
+  V2BarcodeLookupOptions,
+  V2Card,
+  V2RetrieveOptions,
+  V2SearchOptions,
+} from '../../src/types/v2';
 
 /**
  * These exercise the real `HttpClient` against a stubbed `fetch`, so a v2 request is asserted
@@ -338,6 +343,170 @@ describe('v2 cards', () => {
       );
 
       await expect(client.v2.cards.retrieve('nope')).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('identifier lookups', () => {
+    it('looks up by tcgplayer_id and unwraps the single card', async () => {
+      const fetchMock = mockFetch({ data: [CARD] });
+
+      const result = await client.v2.cards.retrieveByTcgplayerId('42', { regions: ['US'] });
+
+      const url = calledUrl(fetchMock);
+      expect(url.pathname).toBe('/v2/cards');
+      expect(url.searchParams.get('tcgplayer_id')).toBe('42');
+      expect(url.searchParams.get('regions')).toBe('US');
+      expect(url.searchParams.has('card_id')).toBe(false);
+      expect(result.data.id).toBe(CARD.id);
+      expect(result.pagination).toBeUndefined();
+      expect(result.usage.remaining).toBe(331644);
+    });
+
+    it('looks up by tcgplayer_sku_id, not tcgplayerSkuId or the old tcgplayer_sku', async () => {
+      const fetchMock = mockFetch({ data: [CARD] });
+
+      const result = await client.v2.cards.retrieveByTcgplayerSkuId('12345');
+
+      const url = calledUrl(fetchMock);
+      expect(url.searchParams.get('tcgplayer_sku_id')).toBe('12345');
+      expect(url.searchParams.has('tcgplayer_sku')).toBe(false);
+      expect(url.searchParams.has('tcgplayerSkuId')).toBe(false);
+      expect(result.data.variants[0].external_ids.tcgplayer_sku).toBe('12345');
+    });
+
+    it('throws NotFoundError naming the id when a TCGplayer lookup 200s with an empty array', async () => {
+      mockFetch({ data: [] });
+
+      await expect(client.v2.cards.retrieveByTcgplayerId('999')).rejects.toThrow(NotFoundError);
+      await expect(client.v2.cards.retrieveByTcgplayerSkuId('999')).rejects.toThrow(/999/);
+    });
+
+    it('surfaces the server 404 on a TCGplayer lookup as NotFoundError', async () => {
+      mockFetch(
+        {
+          type: 'https://api.justtcg.com/problems/not-found',
+          title: 'Resource not found',
+          status: 404,
+          detail: 'No card matches the specified identifier.',
+        },
+        { status: 404, contentType: 'application/problem+json' },
+      );
+
+      await expect(client.v2.cards.retrieveByTcgplayerId('999')).rejects.toThrow(NotFoundError);
+    });
+
+    it('does not accept identifier params in search or retrieve options', () => {
+      // Compile-time only: each of these names the card twice, so the options types reject it.
+      // @ts-expect-error tcgplayer_id is an identifier, not a search filter
+      const search: V2SearchOptions = { tcgplayer_id: '42' };
+      // @ts-expect-error gtin is an identifier, not a retrieve option
+      const retrieve: V2RetrieveOptions = { gtin: '820650850714' };
+      expect([search, retrieve]).toHaveLength(2);
+    });
+  });
+
+  describe('getByBarcode', () => {
+    const SEALED: V2Card = {
+      ...CARD,
+      id: '0b8f6a3e-5a4f-5c0e-9a51-7f2d1c3b4e5a',
+      slug: 'pokemon-scarlet-violet-elite-trainer-box',
+      name: 'Scarlet & Violet Elite Trainer Box',
+      number: null,
+      rarity: null,
+    };
+
+    it('sends the code as gtin and returns every matching card', async () => {
+      const fetchMock = mockFetch({ data: [SEALED, { ...SEALED, id: 'second-listing' }] });
+
+      const result = await client.v2.cards.getByBarcode('820650850714', { regions: ['US'] });
+
+      const url = calledUrl(fetchMock);
+      expect(url.pathname).toBe('/v2/cards');
+      expect(url.searchParams.get('gtin')).toBe('820650850714');
+      expect(url.searchParams.get('regions')).toBe('US');
+      expect(url.searchParams.has('q')).toBe(false);
+      expect(result.data.map((card) => card.id)).toEqual([SEALED.id, 'second-listing']);
+      expect(result.usage.remaining).toBe(331644);
+    });
+
+    it('returns a single match as a one-element array', async () => {
+      mockFetch({ data: [SEALED] });
+
+      const result = await client.v2.cards.getByBarcode('820650850714');
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].name).toBe('Scarlet & Violet Elite Trainer Box');
+    });
+
+    it('passes spaces and hyphens through for the server to strip', async () => {
+      const fetchMock = mockFetch({ data: [SEALED] });
+
+      await client.v2.cards.getByBarcode('8 20650-85071 4');
+
+      expect(calledUrl(fetchMock).searchParams.get('gtin')).toBe('8 20650-85071 4');
+    });
+
+    it('surfaces an unknown code (404) as NotFoundError', async () => {
+      // As captured live on 2026-10-20 for gtin=4006381333931.
+      mockFetch(
+        {
+          type: 'https://api.justtcg.com/problems/not-found',
+          title: 'Resource not found',
+          status: 404,
+          detail: 'No card matches the specified GTIN.',
+        },
+        { status: 404, contentType: 'application/problem+json' },
+      );
+
+      await expect(client.v2.cards.getByBarcode('4006381333931')).rejects.toThrow(NotFoundError);
+    });
+
+    it('throws NotFoundError when a 200 carries an empty array', async () => {
+      mockFetch({ data: [] });
+
+      await expect(client.v2.cards.getByBarcode('4006381333931')).rejects.toThrow(/4006381333931/);
+    });
+
+    it('surfaces a bad check digit (400) as ValidationError on the gtin parameter', async () => {
+      mockFetch(
+        {
+          type: 'https://api.justtcg.com/problems/invalid-parameter',
+          title: 'Invalid parameter',
+          status: 400,
+          detail: 'The GTIN check digit is invalid.',
+          parameter: 'gtin',
+        },
+        { status: 400, contentType: 'application/problem+json' },
+      );
+
+      const error = await client.v2.cards.getByBarcode('820650850715').catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(ValidationError);
+      expect((error as ValidationError).parameter).toBe('gtin');
+      expect((error as ValidationError).status).toBe(400);
+    });
+
+    it('does not accept grading params', () => {
+      // Compile-time only: the API rejects gtin combined with graded.
+      // @ts-expect-error graded cannot be combined with gtin
+      const graded: V2BarcodeLookupOptions = { graded: 'only' };
+      // @ts-expect-error grading_company implies graded
+      const company: V2BarcodeLookupOptions = { grading_company: 'PSA' };
+      // @ts-expect-error grade requires grading_company
+      const grade: V2BarcodeLookupOptions = { grade: [10] };
+      expect([graded, company, grade]).toHaveLength(3);
+    });
+  });
+
+  describe('search with a barcode', () => {
+    it('sends a barcode query as q, leaving the GTIN match to the server', async () => {
+      const fetchMock = mockFetch({ data: [] });
+
+      await client.v2.cards.search('820650850714');
+
+      const url = calledUrl(fetchMock);
+      expect(url.searchParams.get('q')).toBe('820650850714');
+      expect(url.searchParams.has('gtin')).toBe(false);
     });
   });
 

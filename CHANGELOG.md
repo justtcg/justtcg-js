@@ -15,6 +15,26 @@ All notable changes to this project are documented here. This project adheres to
 
 ### Added
 
+- **v2 identifier and barcode lookups on `GET /v2/cards`.** This supersedes the 0.3.0 note that
+  external-id GET parameters were not available on v2.
+  - `V2CardsParams` gains `tcgplayer_id` (one card), `tcgplayer_sku_id` (one variant) and `gtin`.
+    `V2SearchOptions` and `V2RetrieveOptions` exclude all of them.
+  - `client.v2.cards.retrieveByTcgplayerId(id, options?)` and
+    `retrieveByTcgplayerSkuId(id, options?)` return a single card and throw `NotFoundError` when
+    nothing matches.
+  - `client.v2.cards.getByBarcode(gtin, options?)` looks up sealed product by UPC-A, EAN-13/JAN,
+    EAN-8 or GTIN-14 (spaces and hyphens are ignored) and returns `V2Card[]`, because one barcode
+    can match several listings. An invalid check digit throws `ValidationError` (`parameter:
+    'gtin'`) and an unknown code throws `NotFoundError`. Its options type,
+    `V2BarcodeLookupOptions`, rejects `graded`, `grading_company` and `grade`, since the API does
+    not combine `gtin` with `graded`. Coverage is currently sealed MTG, Pokémon and Yu-Gi-Oh!.
+  - `search()` docs: a 12–14 digit barcode passed as `q` is matched as a GTIN first, then falls
+    back to a name search.
+  - New example: `examples/v2-barcode-lookup.ts`.
+  - TODO: `mtgjson_id` and `scryfall_id` are not exposed on GET. The batch docs say GET follows
+    the same identifier precedence, but the GET reference and OpenAPI list only the TCGplayer
+    params and `gtin`, and GET support has not been confirmed live. Use `getByBatch` for those ids.
+
 - **Price status and last known price** ([thin markets](https://justtcg.com/docs/thin-markets)).
   A price expires to `null` after 14 days without a market report if it is $100 or more, or if it
   collapsed below 10% of the variant's 180-day median. Price history and statistics are never

@@ -429,6 +429,15 @@ await client.v2.cards.search('pikachu', { game: 'pokemon' });
 await client.v2.cards.retrieve('907005b3-b7bd-5eac-aed9-d20454b7fe8a');
 await client.v2.cards.retrieveVariant('e72a67fe-922e-5662-bcfc-e8cb509f8220');
 
+// By TCGplayer id: a product id returns the card, a SKU id returns the card with just that variant
+await client.v2.cards.retrieveByTcgplayerId('42445');
+await client.v2.cards.retrieveByTcgplayerSkuId('12345');
+
+// Sealed product by retail barcode (UPC-A, EAN-13/JAN, EAN-8, GTIN-14). Returns an array, because
+// one barcode can match several listings. Throws ValidationError on a bad check digit, NotFoundError
+// on an unknown code. A 12–14 digit barcode passed to search() is matched the same way first.
+await client.v2.cards.getByBarcode('820650850714');
+
 // Batch — snake_case body keys (a v1 payload needs its keys renamed, not sent as-is).
 // `regions` applies to every item and is sent once.
 await client.v2.cards.getByBatch([{ card_id: '…' }, { tcgplayer_id: '42' }], { regions: ['US'] });
@@ -504,7 +513,7 @@ const ukPriced = toV1Cards(data, { region: 'UK' });
 
 Two things deliberately don't round-trip: graded variants are **dropped** unless you pass `{ includeGraded: true }` (v1 was raw-only), and `printing` loses the `" - <Language>"` suffix v1 appended for non-English cards (v2 carries `language` separately). Use `toV1Card` for a single card and `toV1Variant` for a single variant.
 
-> **Note:** External-id GET parameters (`tcgplayerId`, `scryfallId`, …) are pending on the v2 `get` endpoint. Until then, use them via `getByBatch` or stay on `client.v1` for those lookups.
+> **Note:** On v2, GET supports TCGplayer lookups (`retrieveByTcgplayerId`, `retrieveByTcgplayerSkuId`) and barcodes (`getByBarcode`). MTGJSON and Scryfall ids are not exposed on GET yet, so use `getByBatch` (`mtgjson_id`, `scryfall_id`) or `client.v1` for those.
 
 ## Error Handling
 

@@ -285,6 +285,23 @@ export interface V2CardsParams {
   card_id?: string;
   /** Look up one variant directly. The fastest lookup. Accepts a UUID or a legacy slug. */
   variant_id?: string;
+  /** Look up one card by its TCGplayer product ID. v1: `tcgplayerId`. */
+  tcgplayer_id?: string;
+  /** Look up one variant by its TCGplayer SKU ID. v1: `tcgplayerSkuId`. */
+  tcgplayer_sku_id?: string;
+  /**
+   * Look up sealed product by its retail barcode: a 12-digit UPC-A, 13-digit EAN-13 or JAN, 8-digit
+   * EAN-8, or 14-digit GTIN-14. Spaces and hyphens are ignored.
+   *
+   * One barcode can match several listings, so `data` may hold more than one card. An invalid
+   * check digit is a `ValidationError`; a valid code nobody carries is a `NotFoundError`. Cannot be
+   * combined with `graded`. Coverage is currently sealed Magic: The Gathering, Pokémon and
+   * Yu-Gi-Oh! product.
+   *
+   * When several identifiers are sent, the most specific wins: `variant_id`, `tcgplayer_sku_id`,
+   * `tcgplayer_id`, `card_id`, then `gtin` last.
+   */
+  gtin?: string;
   /**
    * Region codes in priority order; the first is your primary market. When omitted the API uses
    * {@link V2_DEFAULT_REGION} (documented as `NA`; same prices either way). Each region beyond the first adds to the request cost.
@@ -304,7 +321,10 @@ export interface V2CardsParams {
   grade?: readonly (string | number)[];
   /** Which components to expand. Replaces the default set entirely. */
   include?: readonly V2IncludeComponent[];
-  /** Free-text search against the card name. */
+  /**
+   * Free-text search against the card name. A 12–14 digit barcode is matched as a `gtin` first,
+   * then falls back to a name search if no product carries it.
+   */
   q?: string;
   /** Limit results to a single game. */
   game?: string;
@@ -364,8 +384,11 @@ export interface V2CardsParams {
  */
 export interface GetV2CardsParams extends V2CardsParams, QueryParams {}
 
+/** The `GET /v2/cards` params that name one card, variant or product directly. */
+type V2IdentifierParam = 'card_id' | 'variant_id' | 'tcgplayer_id' | 'tcgplayer_sku_id' | 'gtin';
+
 /** Options for the v2 `search` convenience method — the filters, minus the query itself. */
-export type V2SearchOptions = Omit<V2CardsParams, 'q' | 'card_id' | 'variant_id'>;
+export type V2SearchOptions = Omit<V2CardsParams, 'q' | V2IdentifierParam>;
 
 /**
  * Options for a direct lookup.
@@ -376,8 +399,7 @@ export type V2SearchOptions = Omit<V2CardsParams, 'q' | 'card_id' | 'variant_id'
  */
 export type V2RetrieveOptions = Omit<
   V2CardsParams,
-  | 'card_id'
-  | 'variant_id'
+  | V2IdentifierParam
   | 'q'
   | 'game'
   | 'set'
@@ -389,6 +411,12 @@ export type V2RetrieveOptions = Omit<
   | 'limit'
   | 'cursor'
 >;
+
+/**
+ * Options for a barcode lookup. The same as {@link V2RetrieveOptions} minus the grading params:
+ * the API rejects `gtin` combined with `graded`, and barcodes only cover sealed product anyway.
+ */
+export type V2BarcodeLookupOptions = Omit<V2RetrieveOptions, 'graded' | 'grading_company' | 'grade'>;
 
 /**
  * One item in a `POST /v2/cards` batch body.

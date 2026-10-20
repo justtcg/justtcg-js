@@ -3,6 +3,7 @@ import { NotFoundError } from '../../errors';
 import {
   GetV2CardsParams,
   V2ApiResponse,
+  V2BarcodeLookupOptions,
   V2BatchLookupItem,
   V2BatchOptions,
   V2Card,
@@ -39,6 +40,10 @@ export class V2CardsResource extends V2BaseResource {
 
   /**
    * A convenience method to search for cards by name.
+   *
+   * A 12–14 digit barcode passed as `query` is matched as a GTIN first and falls back to a name
+   * search if no product carries it, so raw scanner input works here. Use {@link getByBarcode}
+   * when you know the input is a barcode: it 404s rather than falling back.
    * @param query A search query for the card's name.
    * @param options Optional parameters to filter or paginate the results.
    */
@@ -146,16 +151,56 @@ export class V2CardsResource extends V2BaseResource {
     options?: V2RetrieveOptions,
   ): Promise<V2ApiResponse<V2Card>> {
     // There is no variant path, so this stays on the query-param form of the list endpoint.
-    const response = await this._get<V2CardsResponseBody>('/cards', {
-      ...options,
-      variant_id: variantId,
-    });
-    // `{ data: [...] }` even for a direct lookup. The server 404s when nothing matches; the
-    // empty-array guard is belt-and-braces against a success response with no card.
-    const card = response.body.data[0];
-    if (!card) throw notFound(variantId, response.status);
+    return this.retrieveOne(variantId, { ...options, variant_id: variantId });
+  }
 
-    return { data: card, usage: parseV2Usage(response.headers) };
+  /**
+   * Retrieves a single card by its TCGplayer product ID (v1's `tcgplayerId`).
+   * @param tcgplayerId The TCGplayer product ID.
+   * @param options Optional parameters to shape the response.
+   * @throws {NotFoundError} When no card carries `tcgplayerId`.
+   */
+  public async retrieveByTcgplayerId(
+    tcgplayerId: string,
+    options?: V2RetrieveOptions,
+  ): Promise<V2ApiResponse<V2Card>> {
+    return this.retrieveOne(tcgplayerId, { ...options, tcgplayer_id: tcgplayerId });
+  }
+
+  /**
+   * Retrieves the card owning a single variant, by the variant's TCGplayer SKU ID (v1's
+   * `tcgplayerSkuId`). As with {@link retrieveVariant}, the card carries only that variant.
+   * @param tcgplayerSkuId The TCGplayer SKU ID.
+   * @param options Optional parameters to shape the response.
+   * @throws {NotFoundError} When no variant carries `tcgplayerSkuId`.
+   */
+  public async retrieveByTcgplayerSkuId(
+    tcgplayerSkuId: string,
+    options?: V2RetrieveOptions,
+  ): Promise<V2ApiResponse<V2Card>> {
+    return this.retrieveOne(tcgplayerSkuId, { ...options, tcgplayer_sku_id: tcgplayerSkuId });
+  }
+
+  /**
+   * Looks up sealed product by its retail barcode (GTIN).
+   *
+   * Accepts a 12-digit UPC-A, 13-digit EAN-13 or JAN, 8-digit EAN-8 or 14-digit GTIN-14; spaces and
+   * hyphens are ignored. One barcode can belong to several listings, so this returns an array.
+   * Coverage is currently sealed Magic: The Gathering, Pokémon and Yu-Gi-Oh! product.
+   * @param gtin The code printed under the barcode.
+   * @param options Optional parameters to shape the response. Grading params are not accepted.
+   * @throws {ValidationError} When the check digit is invalid (`parameter` is `'gtin'`).
+   * @throws {NotFoundError} When the code is valid but no product carries it.
+   */
+  public async getByBarcode(
+    gtin: string,
+    options?: V2BarcodeLookupOptions,
+  ): Promise<V2ApiResponse<V2Card[]>> {
+    const response = await this._get<V2CardsResponseBody>('/cards', { ...options, gtin });
+    // The server 404s an unknown code; this covers a success response with nothing in it.
+    if (response.body.data.length === 0) throw notFound(gtin, response.status);
+
+    return { data: response.body.data, usage: parseV2Usage(response.headers) };
   }
 
   /**
@@ -194,6 +239,22 @@ export class V2CardsResource extends V2BaseResource {
     };
   }
 
+  /**
+   * Runs a query-param lookup and unwraps the single card.
+   *
+   * The endpoint returns `{ data: [...] }` even for a direct lookup, and 404s when nothing matches;
+   * the empty-array guard is belt-and-braces against a success response with no card.
+   */
+  private async retrieveOne(
+    identifier: string,
+    params: GetV2CardsParams,
+  ): Promise<V2ApiResponse<V2Card>> {
+    const response = await this._get<V2CardsResponseBody>('/cards', params);
+    const card = response.body.data[0];
+    if (!card) throw notFound(identifier, response.status);
+
+    return { data: card, usage: parseV2Usage(response.headers) };
+  }
 }
 
 function notFound(identifier: string, status: number): NotFoundError {
