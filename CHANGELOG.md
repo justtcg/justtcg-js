@@ -5,6 +5,23 @@ All notable changes to this project are documented here. This project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- **v2 `usage` and `pagination` now follow the documented response contract.**
+  - `usage` also reads the combined `RateLimit: limit=…, remaining=…, reset=…` header documented
+    in the OpenAPI spec (comma-separated `key=value` pairs; spacing, quotes and key case are
+    tolerated). The separate `RateLimit-Limit` / `-Remaining` / `-Reset` headers, which the live
+    API sends today, remain the fallback, and `RateLimit-Policy` is still passed through as
+    `usage.policy`. Before this, a response carrying only the combined header returned empty
+    `usage`.
+  - `pagination` takes `nextCursor` / `prevCursor` from the body's `meta.cursor` and `hasMore`
+    from `meta.has_more`, with the `Link` header as the fallback when the body has no cursor
+    object.
+  - `meta.total: null` (total unknown) now maps to `pagination.total` being absent instead of
+    leaking `null`. The `X-Total-Count` fallback is unchanged.
+  - New `pagination.limit` field from `meta.limit`. The body `meta` type is now exported as
+    `V2PaginationMeta`, including `limit` and `cursor: { next, prev }`.
+
 ## [0.4.0] - 2026-08-06
 
 ### Changed (breaking, v2 only)

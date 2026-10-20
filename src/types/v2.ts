@@ -375,18 +375,32 @@ export interface V2BatchOptions {
 /** The raw `/v2/cards` response body. Always an array, including for direct lookups. */
 export interface V2CardsResponseBody {
   data: V2Card[];
-  /** Result-count metadata. Present on browse/search responses; absent is treated as unknown. */
-  meta?: {
-    /** Number of results in this page. */
-    count?: number;
-    /** Total number of results across all pages. */
-    total?: number;
-    has_more?: boolean;
+  /** Pagination metadata. Present on browse/search responses; absent is treated as unknown. */
+  meta?: V2PaginationMeta;
+}
+
+/** The raw `meta` object of a `/v2/cards` response body. */
+export interface V2PaginationMeta {
+  /** Number of results in this page. */
+  count?: number;
+  /** Total number of results across all pages. `null` means unknown, not zero. */
+  total?: number | null;
+  /** The page size applied to this request. */
+  limit?: number;
+  /** Whether a next page exists. */
+  has_more?: boolean;
+  /** Opaque cursors for the adjacent pages. The API keeps these in agreement with `Link`. */
+  cursor?: {
+    /** Cursor for the next page; `null` on the last page. */
+    next?: string | null;
+    /** Cursor for the previous page; `null` on the first page. */
+    prev?: string | null;
   };
 }
 
 /**
- * Cursor pagination, parsed from the RFC 8288 `Link` header plus the response body's `meta`.
+ * Cursor pagination, parsed from the response body's `meta`, with the RFC 8288 `Link` header as
+ * the cursor fallback.
  */
 export interface V2Pagination {
   /** Pass as `cursor` to fetch the next page. Absent on the last page. */
@@ -398,12 +412,16 @@ export interface V2Pagination {
   /** Number of results in this page, from `meta.count`. */
   count?: number;
   /** Total number of results across all pages, from `meta.total` (falls back to the
-   *  `X-Total-Count` header if the body omits `meta`). */
+   *  `X-Total-Count` header if the body omits `meta`). Absent when the total is unknown. */
   total?: number;
+  /** The page size applied to this request, from `meta.limit`. */
+  limit?: number;
 }
 
 /**
- * API usage, parsed from the `RateLimit-*` response headers.
+ * API usage, parsed from the rate-limit response headers: either the combined
+ * `RateLimit: limit=…, remaining=…, reset=…` header documented in the OpenAPI spec, or the
+ * separate `RateLimit-Limit` / `-Remaining` / `-Reset` headers the live API currently sends.
  *
  * This is deliberately narrower than v1's {@link UsageMeta}: v2 moved usage out of the body and
  * into headers, which do not carry the plan name or the daily-used counters. Fields are optional
@@ -416,7 +434,7 @@ export interface V2UsageMeta {
   remaining?: number;
   /** Seconds until the quota window resets. */
   reset?: number;
-  /** The raw `RateLimit-Policy` header, e.g. `"daily";q=1000;w=86400`. */
+  /** The raw `RateLimit-Policy` header when sent, e.g. `"daily";q=1000;w=86400`. */
   policy?: string;
 }
 

@@ -4,8 +4,8 @@ import type { V2Card } from '../../src/types/v2';
 
 /**
  * Cursor iteration, driven by a `fetch` stub that returns a scripted sequence of pages. Each page
- * carries only the `Link` header the real API would send, so the generator is walking real cursors
- * rather than a mocked pagination object.
+ * carries the `Link` header and body `meta.cursor` the real API sends (or just one of them), so the
+ * generator is walking real cursors rather than a mocked pagination object.
  */
 
 function card(name: string): V2Card {
@@ -29,11 +29,14 @@ interface Page {
   next?: string;
 }
 
+/** Where the scripted pages carry their cursors: both places (as the live API does), or one. */
+type CursorSource = 'both' | 'link' | 'meta';
+
 /**
  * Stub `fetch` with a scripted sequence of pages, returning the recorded cursor per request.
  * A request past the end of the script fails the test rather than hanging the generator.
  */
-function mockPages(pages: Page[]) {
+function mockPages(pages: Page[], source: CursorSource = 'both') {
   const cursors: (string | null)[] = [];
   let call = 0;
 
@@ -43,13 +46,25 @@ function mockPages(pages: Page[]) {
     if (!page) throw new Error(`Unexpected request ${call} past the end of the script`);
 
     const headers = new Headers({ 'Content-Type': 'application/json' });
-    if (page.next) headers.set('Link', `</v2/cards?cursor=${page.next}&limit=2>; rel="next"`);
+    if (page.next && source !== 'meta') {
+      headers.set('Link', `</v2/cards?cursor=${page.next}&limit=2>; rel="next"`);
+    }
+    const body: Record<string, unknown> = { data: page.names.map(card) };
+    if (source !== 'link') {
+      body.meta = {
+        count: page.names.length,
+        total: null,
+        limit: 2,
+        has_more: page.next !== undefined,
+        cursor: { next: page.next ?? null, prev: null },
+      };
+    }
 
     return Promise.resolve({
       ok: true,
       status: 200,
       headers,
-      text: () => Promise.resolve(JSON.stringify({ data: page.names.map(card) })),
+      text: () => Promise.resolve(JSON.stringify(body)),
     });
   });
 
@@ -86,6 +101,19 @@ describe('v2 cards iteration', () => {
     expect(cursors).toEqual([null, 'c2', 'c3']);
   });
 
+  it.each(['link', 'meta'] as const)('walks pages using only the %s cursors', async (source) => {
+    const { cursors } = mockPages(
+      [{ names: ['a'], next: 'c2' }, { names: ['b'], next: 'c3' }, { names: ['c'] }],
+      source,
+    );
+
+    const names: string[] = [];
+    for await (const c of client.v2.cards.iterate({ game: 'pokemon' })) names.push(c.name);
+
+    expect(names).toEqual(['a', 'b', 'c']);
+    expect(cursors).toEqual([null, 'c2', 'c3']);
+  });
+
   it('never reuses a cursor', async () => {
     const { cursors } = mockPages([
       { names: ['a'], next: 'c2' },
@@ -102,21 +130,27 @@ describe('v2 cards iteration', () => {
     expect(new Set(used).size).toBe(used.length);
   });
 
-  it('stops instead of looping when the server repeats a cursor', async () => {
-    // A pagination bug that hands back the cursor we just used would otherwise spin forever.
-    const { fetchMock } = mockPages([
-      { names: ['a'], next: 'stuck' },
-      { names: ['b'], next: 'stuck' },
-    ]);
+  it.each(['both', 'link', 'meta'] as const)(
+    'stops instead of looping when the server repeats a cursor (%s)',
+    async (source) => {
+      // A pagination bug that hands back the cursor we just used would otherwise spin forever.
+      const { fetchMock } = mockPages(
+        [
+          { names: ['a'], next: 'stuck' },
+          { names: ['b'], next: 'stuck' },
+        ],
+        source,
+      );
 
-    const names: string[] = [];
-    for await (const c of client.v2.cards.iterate({ game: 'pokemon' })) {
-      names.push(c.name);
-    }
+      const names: string[] = [];
+      for await (const c of client.v2.cards.iterate({ game: 'pokemon' })) {
+        names.push(c.name);
+      }
 
-    expect(names).toEqual(['a', 'b']);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
+      expect(names).toEqual(['a', 'b']);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it('stops when the resumed cursor is handed straight back', async () => {
     const { fetchMock } = mockPages([{ names: ['a'], next: 'resume' }]);

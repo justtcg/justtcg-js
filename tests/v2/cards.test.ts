@@ -44,11 +44,12 @@ const CARD: V2Card = {
   ],
 };
 
+/** The separate rate-limit headers the live API sends (captured 2026-10-20). */
 const RATE_LIMIT_HEADERS = {
-  'RateLimit-Limit': '10000',
-  'RateLimit-Remaining': '9987',
-  'RateLimit-Reset': '43200',
-  'RateLimit-Policy': '"daily";q=1000;w=86400',
+  'RateLimit-Limit': '500000',
+  'RateLimit-Remaining': '331644',
+  'RateLimit-Reset': '59443',
+  'RateLimit-Policy': '"daily";q=50000;w=86400',
 };
 
 function mockFetch(
@@ -96,10 +97,10 @@ describe('v2 cards', () => {
       expect(calledUrl(fetchMock).search).toBe('');
       expect(result.data).toHaveLength(1);
       expect(result.usage).toEqual({
-        limit: 10000,
-        remaining: 9987,
-        reset: 43200,
-        policy: '"daily";q=1000;w=86400',
+        limit: 500000,
+        remaining: 331644,
+        reset: 59443,
+        policy: '"daily";q=50000;w=86400',
       });
     });
 
@@ -144,13 +145,73 @@ describe('v2 cards', () => {
       expect(result.pagination).toEqual({ hasMore: false });
     });
 
-    it('exposes total and count from the response body meta', async () => {
-      mockFetch({ data: [CARD], meta: { count: 1, total: 31474, has_more: true } });
+    it('exposes the full pagination from the response body meta, as the live API sends it', async () => {
+      // Captured 2026-10-20: `meta.cursor.next` is the decoded form of the Link header's cursor.
+      mockFetch(
+        {
+          data: [CARD],
+          meta: {
+            count: 1,
+            total: 31563,
+            limit: 1,
+            has_more: true,
+            cursor: { next: 'eyJvIjoxfQ==', prev: null },
+          },
+        },
+        {
+          headers: {
+            Link: '</v2/cards?game=pokemon&limit=1&cursor=eyJvIjoxfQ%3D%3D>; rel="next"',
+            'X-Total-Count': '31563',
+          },
+        },
+      );
+
+      const result = await client.v2.cards.get({ game: 'pokemon', limit: 1 });
+
+      expect(result.pagination).toEqual({
+        nextCursor: 'eyJvIjoxfQ==',
+        hasMore: true,
+        count: 1,
+        total: 31563,
+        limit: 1,
+      });
+    });
+
+    it('reports an unknown total (meta.total: null) as absent, not zero', async () => {
+      mockFetch({
+        data: [CARD],
+        meta: {
+          count: 1,
+          total: null,
+          limit: 20,
+          has_more: false,
+          cursor: { next: null, prev: null },
+        },
+      });
 
       const result = await client.v2.cards.get({ game: 'pokemon' });
 
-      expect(result.pagination?.total).toBe(31474);
-      expect(result.pagination?.count).toBe(1);
+      expect(result.pagination).toEqual({ hasMore: false, count: 1, limit: 20 });
+    });
+
+    it('parses the combined RateLimit header documented in the OpenAPI spec', async () => {
+      // Plain `Headers` so the separate RATE_LIMIT_HEADERS are absent and only the combined one counts.
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          headers: new Headers({
+            'Content-Type': 'application/json',
+            RateLimit: 'limit=500000, remaining=499958, reset=42',
+          }),
+          text: () => Promise.resolve(JSON.stringify({ data: [CARD] })),
+        }),
+      );
+
+      const result = await client.v2.cards.get();
+
+      expect(result.usage).toEqual({ limit: 500000, remaining: 499958, reset: 42 });
     });
 
     it('forwards a cursor back as a query param', async () => {
@@ -201,7 +262,7 @@ describe('v2 cards', () => {
       // A single card, not an array — the endpoint always sends `{ data: [...] }`.
       expect(result.data.name).toBe('Charizard');
       expect(result.pagination).toBeUndefined();
-      expect(result.usage.remaining).toBe(9987);
+      expect(result.usage.remaining).toBe(331644);
     });
 
     it('accepts a legacy v1 slug as the identifier', async () => {
@@ -209,9 +270,7 @@ describe('v2 cards', () => {
 
       await client.v2.cards.retrieve('pokemon-base-set-charizard-4');
 
-      expect(calledUrl(fetchMock).searchParams.get('card_id')).toBe(
-        'pokemon-base-set-charizard-4',
-      );
+      expect(calledUrl(fetchMock).searchParams.get('card_id')).toBe('pokemon-base-set-charizard-4');
     });
 
     it('looks up by variant_id', async () => {
@@ -265,7 +324,7 @@ describe('v2 cards', () => {
       ]);
       // Batch responses are never paginated.
       expect(result.pagination).toBeUndefined();
-      expect(result.usage.limit).toBe(10000);
+      expect(result.usage.limit).toBe(500000);
     });
 
     it('omits regions entirely when no options are given', async () => {
@@ -284,7 +343,7 @@ describe('v2 cards', () => {
           type: 'https://api.justtcg.com/problems/invalid-parameter',
           title: 'Invalid parameter',
           status: 400,
-          detail: "graded=include requires a direct lookup.",
+          detail: 'graded=include requires a direct lookup.',
           parameter: 'graded',
         },
         { status: 400, contentType: 'application/problem+json' },
