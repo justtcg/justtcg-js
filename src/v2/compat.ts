@@ -20,6 +20,12 @@ import { V2Card, V2Market, V2Period, V2PeriodWindow, V2Variant } from '../types/
  *
  * - the 7-day mean is `avgPrice`, not `avgPrice7d`
  * - `1y` carries only min/max, and `all_time` adds the dated extremes
+ *
+ * `changes_count` → `priceChangesCount*` is an exact semantic match: both count how often the sale
+ * price changed in the window. (Until 2026-10-19 v2 sent the sales count under `changes_count`.)
+ *
+ * `sales_count` has no v1 field, so it is deliberately absent from this table and
+ * {@link toV1Variant} drops it. Read it from the v2 payload if you need it.
  */
 export const V1_PERIOD_FIELDS: {
   readonly [W in V2PeriodWindow]: Readonly<Partial<Record<keyof V2Period, keyof Variant>>>;
@@ -157,12 +163,13 @@ export function toV1Variant(variant: V2Variant, options: ToV1Options = {}): Vari
  * const legacy: Card[] = toV1Cards(data);
  * ```
  *
- * Two things do not round-trip, both harmless:
+ * Three things do not round-trip, all harmless:
  *
  * - **`printing` loses the `" - <Language>"` suffix** v1 appended for non-English cards. v2 strips
  *   it because `language` already carries the same information, and re-appending it here would
  *   fabricate a suffix for cards that never had one.
  * - **Graded variants are dropped** unless `includeGraded` is set, because v1 never returned them.
+ * - **`periods.*.sales_count` is dropped**, because v1 has no field for it.
  *
  * @param card The v2 card.
  * @param options Which market to flatten, and whether to keep graded variants.

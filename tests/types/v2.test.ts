@@ -116,6 +116,23 @@ describe('v2 types', () => {
     expect(empty.avg).toBeUndefined();
   });
 
+  it('carries sales_count alongside changes_count in every window', () => {
+    // Five sales at one price: sales_count 5, changes_count 0 — changes_count never exceeds it.
+    const flat: V2Period = { avg: 10, min: 10, max: 10, sales_count: 5, changes_count: 0 };
+    const yearly: V2Period = { min: 8, max: 14, sales_count: 120 };
+    const allTime: V2Period = {
+      min: 2,
+      max: 30,
+      min_date: '2019-03-14',
+      max_date: '2021-01-08',
+      sales_count: 900,
+    };
+
+    expect(flat.changes_count).toBeLessThanOrEqual(flat.sales_count!);
+    expect(yearly.sales_count).toBe(120);
+    expect(allTime.sales_count).toBe(900);
+  });
+
   it('exposes the serviceable regions and the default region', () => {
     expect(V2_SERVICEABLE_REGIONS).toEqual(['NA', 'US']);
     // The code, not the docs, is the source of truth here: omitting `regions` yields US.

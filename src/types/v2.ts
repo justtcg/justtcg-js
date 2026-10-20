@@ -100,6 +100,15 @@ export type V2PriceHistoryWindow = '7d' | '30d' | '90d' | '180d' | '1y';
  * Every field is optional: absent means the API did not compute or return it, which is distinct
  * from a value of zero. These carry the same values as v1's flat stat fields (`avgPrice30d`,
  * `minPrice7d`, …), regrouped by window.
+ *
+ * Which fields appear depends on the window:
+ *
+ * - `7d`, `30d`, `90d`: the full set, plus `range_position` on `30d` and `90d`
+ * - `1y`: `min`, `max` and `sales_count` only
+ * - `all_time`: `min`, `max`, `sales_count`, `min_date` and `max_date` only
+ *
+ * A window with no sales is omitted from `periods` entirely, so a missing window you requested
+ * means zero sales — `sales_count` is never `0`.
  */
 export interface V2Period {
   /** Percent change across the window. v1: `priceChange30d` and friends. */
@@ -118,7 +127,17 @@ export interface V2Period {
   iqr?: number;
   /** Slope of the fitted price trend. */
   trend_slope?: number;
-  /** Number of distinct price changes in the window. */
+  /**
+   * Number of sales in the window — sales, not units, excluding refunded and voided sales. Always
+   * at least 1 when present; a window with no sales is omitted rather than reporting `0`. Every
+   * window carries it. No v1 equivalent, so `toV1Variant` drops it.
+   */
+  sales_count?: number;
+  /**
+   * Number of times the sale price changed in the window: five sales at the same price count 0.
+   * Never more than `sales_count`. Before 2026-10-19 the API sent the sales count here instead.
+   * v1: `priceChangesCount30d` and friends.
+   */
   changes_count?: number;
   /** Where the current price sits within the window's range. `30d` and `90d` only. */
   range_position?: number;

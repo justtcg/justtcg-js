@@ -13,6 +13,12 @@ All notable changes to this project are documented here. This project adheres to
   `{ error, code, details }` body and the v2 `problem+json` body. Existing
   `instanceof AuthenticationError` checks still catch it.
 
+- **`sales_count` on v2 periods.** Every `markets[].periods.<window>` (`7d`, `30d`, `90d`, `1y`,
+  `all_time`) now carries `sales_count`: the number of sales (not units) in the window, excluding
+  refunded and voided sales. It is always at least 1; a window with no sales is omitted, so a
+  missing window means zero. It follows `include=periods[.<window>]` like the other stats. v1 has
+  no equivalent field, so `toV1Card`/`toV1Variant` drop it.
+
 ### Fixed
 
 - **v2 errors now map the documented `problem+json` shape.** The spec gives `type` as a docs
@@ -43,6 +49,12 @@ All notable changes to this project are documented here. This project adheres to
     leaking `null`. The `X-Total-Count` fallback is unchanged.
   - New `pagination.limit` field from `meta.limit`. The body `meta` type is now exported as
     `V2PaginationMeta`, including `limit` and `cursor: { next, prev }`.
+
+- **`V2Period.changes_count` is documented with its corrected meaning.** Since 2026-10-19 the API
+  sends the number of times the sale price changed in the window (five sales at one price count
+  0, and it never exceeds `sales_count`). Before that it equalled the sales count. It now matches
+  v1's `priceChangesCount*` exactly, which is what the compat adapters already map it to. The
+  `V2Period` docs also list which fields each window carries.
 
 ## [0.4.0] - 2026-08-06
 

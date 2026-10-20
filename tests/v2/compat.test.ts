@@ -47,6 +47,7 @@ const V2: V2Card = {
               iqr: 12.5,
               trend_slope: 1.75,
               changes_count: 6,
+              sales_count: 9,
             },
             '30d': {
               change_pct: -4.2,
@@ -58,6 +59,7 @@ const V2: V2Card = {
               iqr: 25,
               trend_slope: -2.1,
               changes_count: 22,
+              sales_count: 31,
               range_position: 0.34,
             },
             '90d': {
@@ -70,14 +72,16 @@ const V2: V2Card = {
               iqr: 44,
               trend_slope: 0.95,
               changes_count: 61,
+              sales_count: 88,
               range_position: 0.54,
             },
-            '1y': { min: 300, max: 520 },
+            '1y': { min: 300, max: 520, sales_count: 240 },
             all_time: {
               min: 42.5,
               max: 610,
               min_date: '2019-03-14',
               max_date: '2021-01-08',
+              sales_count: 1532,
             },
           },
           price_history: [
@@ -256,6 +260,25 @@ describe('toV1Card periods', () => {
 
     expect(result.avgPrice).toBe(410.5);
     expect('avgPrice7d' in result).toBe(false);
+  });
+
+  it('drops sales_count, which has no v1 field', () => {
+    const result = toV1Variant(V2.variants[0]);
+
+    // The fixture carries sales_count in every window, and the full-object equality above already
+    // proves nothing leaked; this pins the reason down by name.
+    expect(Object.values(V1_PERIOD_FIELDS).some(fields => 'sales_count' in fields)).toBe(false);
+    expect(Object.keys(result).some(key => /sales/i.test(key))).toBe(false);
+  });
+
+  it('keeps changes_count apart from sales_count', () => {
+    // Since 2026-10-19 changes_count counts price changes, not sales, so the two differ — the
+    // adapter must carry changes_count through, never sales_count.
+    const result = toV1Variant(V2.variants[0]);
+
+    expect(result.priceChangesCount7d).toBe(6);
+    expect(result.priceChangesCount30d).toBe(22);
+    expect(result.priceChangesCount90d).toBe(61);
   });
 
   it('omits a window that was not requested rather than nulling its fields', () => {
