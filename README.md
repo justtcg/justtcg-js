@@ -497,7 +497,7 @@ Two things deliberately don't round-trip: graded variants are **dropped** unless
 
 The SDK surfaces errors in two primary ways: **thrown exceptions** for critical SDK issues and an **`error` property** on the response object for API issues.
 
-> **v2 note:** v2 never uses the `error` property — it always throws a typed exception on failure. The classes are exported (`JustTCGError` and its subclasses `AuthenticationError`, `ValidationError`, `RegionNotAvailableError`, `NotFoundError`, `RateLimitError`, `ApiError`) so you can branch with `instanceof`. Each carries `.status`, `.code`, and the raw `.problem` body; `RateLimitError` adds `.retryAfter`, `RegionNotAvailableError` adds `.available`.
+> **v2 note:** v2 never uses the `error` property — it always throws a typed exception on failure. The classes are exported (`JustTCGError` and its subclasses `AuthenticationError` (and its subclass `SubscriptionRequiredError`), `ValidationError`, `RegionNotAvailableError`, `NotFoundError`, `RateLimitError`, `ApiError`) so you can branch with `instanceof`. Each carries `.status`, `.code`, and the raw `.problem` body; `RateLimitError` adds `.retryAfter`, `RegionNotAvailableError` adds `.available`, `SubscriptionRequiredError` adds `.reactivateUrl`.
 >
 > ```typescript
 > import { NotFoundError, RateLimitError } from 'justtcg-js';

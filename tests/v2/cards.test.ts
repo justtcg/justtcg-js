@@ -293,7 +293,7 @@ describe('v2 cards', () => {
     it('surfaces the server 404 as NotFoundError', async () => {
       mockFetch(
         {
-          type: 'https://api.justtcg.com/problems/not-found',
+          type: 'https://justtcg.com/docs/errors#not-found',
           title: 'Resource not found',
           status: 404,
           detail: 'No card matches that identifier.',
@@ -337,13 +337,14 @@ describe('v2 cards', () => {
   });
 
   describe('errors', () => {
-    it('maps invalid-parameter to ValidationError carrying the parameter', async () => {
+    it('maps invalid-request to ValidationError carrying the parameter and code', async () => {
       mockFetch(
         {
-          type: 'https://api.justtcg.com/problems/invalid-parameter',
-          title: 'Invalid parameter',
+          type: 'https://justtcg.com/docs/errors#invalid-request',
+          title: 'Invalid request',
           status: 400,
           detail: 'graded=include requires a direct lookup.',
+          code: 'INVALID_REQUEST',
           parameter: 'graded',
         },
         { status: 400, contentType: 'application/problem+json' },
@@ -352,13 +353,14 @@ describe('v2 cards', () => {
       await expect(client.v2.cards.get({ graded: 'include' })).rejects.toThrow(ValidationError);
       await expect(client.v2.cards.get({ graded: 'include' })).rejects.toMatchObject({
         parameter: 'graded',
+        code: 'INVALID_REQUEST',
       });
     });
 
     it('maps region-not-available and lists the serviceable regions', async () => {
       mockFetch(
         {
-          type: 'https://api.justtcg.com/problems/region-not-available',
+          type: 'https://justtcg.com/docs/errors#region-not-available',
           title: 'Region not yet available',
           status: 400,
           detail: 'Region JP is not yet available.',

@@ -243,10 +243,11 @@ describe('v2 cards iteration', () => {
           text: () =>
             Promise.resolve(
               JSON.stringify({
-                type: 'https://api.justtcg.com/problems/rate-limited',
+                type: 'https://justtcg.com/docs/errors#rate-limit-exceeded',
                 title: 'Too many requests',
                 status: 429,
                 detail: 'Rate limit exceeded.',
+                code: 'RATE_LIMIT_EXCEEDED',
               }),
             ),
         });

@@ -5,7 +5,29 @@ All notable changes to this project are documented here. This project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **`SubscriptionRequiredError`** (extends `AuthenticationError`) for `403 SUBSCRIPTION_REQUIRED`,
+  returned when an API key is valid but its plan is not active. `reactivateUrl` carries
+  `details.reactivate_url`, the link that resubscribes to that plan. Mapped from both the v1
+  `{ error, code, details }` body and the v2 `problem+json` body. Existing
+  `instanceof AuthenticationError` checks still catch it.
+
 ### Fixed
+
+- **v2 errors now map the documented `problem+json` shape.** The spec gives `type` as a docs
+  anchor (`https://justtcg.com/docs/errors#invalid-request`) plus a `code` member with the v1
+  codes. The SDK used to read only the last path segment of `type`, so documented bodies all fell
+  back to status-only mapping: `RegionNotAvailableError` never fired and
+  `ValidationError.parameter` was dropped.
+  - The problem slug is now taken from the URI fragment, falling back to the last path segment.
+    The `https://api.justtcg.com/problems/<slug>` URIs the live API sends today still map as
+    before.
+  - `JustTCGError.code` is the body's `code` (e.g. `INVALID_REQUEST`) when present, so v1 and v2
+    errors share one vocabulary. Without a `code` member it is still the slug. The full body
+    stays on `error.problem`.
+  - `invalid-request` maps to `ValidationError`, and `parameter` is kept on any 400 problem,
+    including types the SDK does not recognise.
 
 - **v2 `usage` and `pagination` now follow the documented response contract.**
   - `usage` also reads the combined `RateLimit: limit=…, remaining=…, reset=…` header documented

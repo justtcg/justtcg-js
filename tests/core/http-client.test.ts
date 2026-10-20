@@ -6,8 +6,11 @@ import {
   NotFoundError,
   RateLimitError,
   RegionNotAvailableError,
+  SubscriptionRequiredError,
   ValidationError,
 } from '../../src/errors';
+
+const PROBLEM = { status: 400, headers: { 'Content-Type': 'application/problem+json' } };
 
 const BASE_URL = 'https://api.justtcg.com';
 
@@ -149,38 +152,42 @@ describe('HttpClient', () => {
       await expect(client.get('/v1/cards')).rejects.toThrow(ApiError);
     });
 
-    it('maps problem+json invalid-parameter to a ValidationError with the parameter', async () => {
+    it('maps a documented problem+json invalid-request to a ValidationError with the parameter', async () => {
       mockFetch(
         {
-          type: 'https://api.justtcg.com/problems/invalid-parameter',
-          title: 'Invalid parameter',
+          type: 'https://justtcg.com/docs/errors#invalid-request',
+          title: 'Invalid request',
           status: 400,
-          detail: "grade requires grading_company.",
+          detail: 'grade requires grading_company.',
+          code: 'INVALID_REQUEST',
           parameter: 'grading_company',
         },
-        { status: 400, headers: { 'Content-Type': 'application/problem+json' } },
+        PROBLEM,
       );
 
       const error = await client.get('/v2/cards').catch((e) => e);
 
       expect(error).toBeInstanceOf(ValidationError);
       expect(error.parameter).toBe('grading_company');
-      expect(error.code).toBe('invalid-parameter');
+      // `code` is the v1-compatible code, not the URI slug.
+      expect(error.code).toBe('INVALID_REQUEST');
       expect(error.status).toBe(400);
       expect(error.message).toBe('grade requires grading_company.');
-      expect(error.problem.title).toBe('Invalid parameter');
+      expect(error.problem.title).toBe('Invalid request');
+      expect(error.problem.type).toBe('https://justtcg.com/docs/errors#invalid-request');
     });
 
-    it('maps problem+json region-not-available, exposing the live regions', async () => {
+    it('maps a documented region-not-available fragment, exposing the live regions', async () => {
       mockFetch(
         {
-          type: 'https://api.justtcg.com/problems/region-not-available',
+          type: 'https://justtcg.com/docs/errors#region-not-available',
           title: 'Region not yet available',
           status: 400,
           detail: "Region 'EU' is not yet available; currently live: NA, US.",
+          code: 'INVALID_REQUEST',
           available: ['NA', 'US'],
         },
-        { status: 400, headers: { 'Content-Type': 'application/problem+json' } },
+        PROBLEM,
       );
 
       const error = await client.get('/v2/cards').catch((e) => e);
@@ -189,20 +196,186 @@ describe('HttpClient', () => {
       // RegionNotAvailableError is a ValidationError, so a generic 400 handler still catches it.
       expect(error).toBeInstanceOf(ValidationError);
       expect(error.available).toEqual(['NA', 'US']);
+      expect(error.code).toBe('INVALID_REQUEST');
     });
 
-    it('maps problem+json not-found to a NotFoundError', async () => {
+    it('maps a documented not-found fragment to a NotFoundError', async () => {
       mockFetch(
         {
-          type: 'https://api.justtcg.com/problems/not-found',
+          type: 'https://justtcg.com/docs/errors#not-found',
           title: 'Resource not found',
           status: 404,
           detail: 'Card with the specified identifier could not be found.',
         },
-        { status: 404, headers: { 'Content-Type': 'application/problem+json' } },
+        { ...PROBLEM, status: 404 },
       );
 
       await expect(client.get('/v2/cards/nope')).rejects.toThrow(NotFoundError);
+    });
+
+    it('keeps the parameter on an unrecognised 400 problem type', async () => {
+      mockFetch(
+        {
+          type: 'https://justtcg.com/docs/errors#something-new',
+          title: 'Something new',
+          status: 400,
+          detail: 'Must be a GTIN with a valid check digit.',
+          parameter: 'gtin',
+        },
+        PROBLEM,
+      );
+
+      const error = await client.get('/v2/cards').catch((e) => e);
+
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(error.parameter).toBe('gtin');
+      // No `code` member: fall back to the slug.
+      expect(error.code).toBe('something-new');
+    });
+
+    it('maps a problem+json auth error by status, keeping the code', async () => {
+      mockFetch(
+        {
+          type: 'https://justtcg.com/docs/errors#invalid-api-key',
+          title: 'Invalid API key',
+          status: 401,
+          detail: 'Invalid API key',
+          code: 'INVALID_API_KEY',
+        },
+        { ...PROBLEM, status: 401 },
+      );
+
+      const error = await client.get('/v2/cards').catch((e) => e);
+
+      expect(error).toBeInstanceOf(AuthenticationError);
+      expect(error).not.toBeInstanceOf(SubscriptionRequiredError);
+      expect(error.code).toBe('INVALID_API_KEY');
+    });
+
+    describe('legacy /problems/<slug> type URIs (what the server sends today)', () => {
+      it('maps invalid-parameter to a ValidationError, with the slug as code', async () => {
+        mockFetch(
+          {
+            type: 'https://api.justtcg.com/problems/invalid-parameter',
+            title: 'Invalid parameter',
+            status: 400,
+            detail: 'Must be between 1 and 200 for your plan.',
+            parameter: 'limit',
+          },
+          PROBLEM,
+        );
+
+        const error = await client.get('/v2/cards').catch((e) => e);
+
+        expect(error).toBeInstanceOf(ValidationError);
+        expect(error.parameter).toBe('limit');
+        expect(error.code).toBe('invalid-parameter');
+      });
+
+      it('maps region-not-available to a RegionNotAvailableError', async () => {
+        mockFetch(
+          {
+            type: 'https://api.justtcg.com/problems/region-not-available',
+            title: 'Region not yet available',
+            status: 400,
+            detail: "Region 'EU' is not yet available; currently live: NA, US.",
+            available: ['NA', 'US'],
+          },
+          PROBLEM,
+        );
+
+        const error = await client.get('/v2/cards').catch((e) => e);
+
+        expect(error).toBeInstanceOf(RegionNotAvailableError);
+        expect(error.available).toEqual(['NA', 'US']);
+      });
+
+      it('maps not-found to a NotFoundError', async () => {
+        mockFetch(
+          {
+            type: 'https://api.justtcg.com/problems/not-found',
+            title: 'Resource not found',
+            status: 404,
+            detail: 'No card matches the specified GTIN.',
+          },
+          { ...PROBLEM, status: 404 },
+        );
+
+        await expect(client.get('/v2/cards')).rejects.toThrow(NotFoundError);
+      });
+    });
+
+    describe('SUBSCRIPTION_REQUIRED', () => {
+      const reactivate = 'https://justtcg.com/dashboard/billing/reactivate?plan=pro';
+
+      it('maps the v1 { error, code, details } shape, exposing reactivateUrl', async () => {
+        mockFetch(
+          {
+            error: 'Your plan is not active.',
+            code: 'SUBSCRIPTION_REQUIRED',
+            details: { reactivate_url: reactivate },
+          },
+          { status: 403 },
+        );
+
+        const error = await client.get('/v1/cards').catch((e) => e);
+
+        expect(error).toBeInstanceOf(SubscriptionRequiredError);
+        // A generic auth handler still catches it.
+        expect(error).toBeInstanceOf(AuthenticationError);
+        expect(error.reactivateUrl).toBe(reactivate);
+        expect(error.code).toBe('SUBSCRIPTION_REQUIRED');
+        expect(error.status).toBe(403);
+        expect(error.message).toBe('Your plan is not active.');
+      });
+
+      it('maps the v2 problem shape, reading details.reactivate_url', async () => {
+        mockFetch(
+          {
+            type: 'https://justtcg.com/docs/errors#subscription-required',
+            title: 'Subscription required',
+            status: 403,
+            detail: 'Your plan is not active.',
+            code: 'SUBSCRIPTION_REQUIRED',
+            details: { reactivate_url: reactivate },
+          },
+          { ...PROBLEM, status: 403 },
+        );
+
+        const error = await client.get('/v2/cards').catch((e) => e);
+
+        expect(error).toBeInstanceOf(SubscriptionRequiredError);
+        expect(error.reactivateUrl).toBe(reactivate);
+        expect(error.code).toBe('SUBSCRIPTION_REQUIRED');
+        expect(error.problem.details).toEqual({ reactivate_url: reactivate });
+      });
+
+      it('reads a top-level reactivate_url extension member', async () => {
+        mockFetch(
+          {
+            type: 'https://justtcg.com/docs/errors#subscription-required',
+            title: 'Subscription required',
+            status: 403,
+            detail: 'Your plan is not active.',
+            reactivate_url: reactivate,
+          },
+          { ...PROBLEM, status: 403 },
+        );
+
+        const error = await client.get('/v2/cards').catch((e) => e);
+
+        expect(error).toBeInstanceOf(SubscriptionRequiredError);
+        expect(error.reactivateUrl).toBe(reactivate);
+      });
+
+      it('leaves reactivateUrl undefined when the body omits it', async () => {
+        mockFetch({ error: 'Your plan is not active.', code: 'SUBSCRIPTION_REQUIRED' }, { status: 403 });
+
+        const error = await client.get('/v1/cards').catch((e) => e);
+
+        expect(error).toBeInstanceOf(SubscriptionRequiredError);
+        expect(error.reactivateUrl).toBeUndefined();
+      });
     });
 
     it('maps a 429 to a RateLimitError, reading retryAfter from the headers', async () => {
