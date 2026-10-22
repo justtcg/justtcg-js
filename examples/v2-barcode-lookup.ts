@@ -9,7 +9,7 @@ import { JustTCG, NotFoundError, ValidationError } from '../src';
  *
  * Coverage is currently sealed Magic: The Gathering, Pokémon and Yu-Gi-Oh! product.
  *
- * Run with: npx tsx examples/v2-barcode-lookup.ts 820650850714
+ * Run with: npx ts-node examples/v2-barcode-lookup.ts 820650850714
  */
 async function barcodeLookup(gtin: string) {
   const client = new JustTCG();

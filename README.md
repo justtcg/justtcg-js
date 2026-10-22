@@ -10,7 +10,7 @@ The official JavaScript/TypeScript SDK for the JustTCG API. Access real-time and
 
 -   **✅ Modern & Type-Safe:** Written entirely in TypeScript for a superior developer experience with static typing and autocomplete.
 -   **🔐 Versioned API Access:** Clean, explicit access to API versions via `client.v1` and `client.v2`, ensuring your integrations are stable and future-proof.
--   **🌍 v2 (public beta):** Localized pricing across regions, graded cards, cursor pagination with `iterate()`, and a `toV1Cards` adapter so you can migrate without rewriting your types. See [Using v2](#using-v2-public-beta).
+-   **🌍 v2 (public beta):** Localized pricing across regions, graded cards, TCGplayer and barcode lookups, cursor pagination with `iterate()`, and a `toV1Cards` adapter so you can migrate without rewriting your types. See [Using v2](#using-v2-public-beta).
 -   **🧼 Clean Data Models:** Raw API responses are automatically transformed into clean, intuitive JavaScript objects (e.g., prices in dollars, camelCase properties).
 -   **🚨 Robust Error Handling:** Predictable, typed errors allow you to gracefully handle API issues like invalid keys or rate limits.
 -   **🚀 Zero Dependencies:** A lightweight package with no production dependencies for fast and secure installation.
@@ -407,7 +407,8 @@ for (const card of data) {
 | **Pricing** | flat `price`, `avgPrice30d`, … on the variant | a `markets[]` array, one entry per region; stats grouped under `markets[].periods` |
 | **Localization** | US/NA only | request `regions: ['UK', 'US']` — prices are the real local prices, **never** currency-converted |
 | **Graded cards** | not returned | ordinary variants with `type: 'graded'` and a `grading` object |
-| **Pagination** | `offset` + `total` | opaque `cursor` + `Link` header; walk it with `iterate()` |
+| **Pagination** | `offset` + `total` | opaque `cursor` from the body's `meta.cursor` (or the `Link` header); walk it with `iterate()` |
+| **Statistics** | `avgPrice30d`, `priceChangesCount30d`, … | `markets[].periods.<window>`, which adds `sales_count` (sales in the window; a window with no sales is omitted) |
 | **Usage** | `_metadata` in the body | `RateLimit-*` response headers, surfaced as `usage` |
 | **Errors** | `error`/`code` on the response | thrown [typed exceptions](#error-handling) (`NotFoundError`, `RateLimitError`, …) |
 
@@ -415,7 +416,7 @@ Nested fields also regroup: `game` becomes `{ id, name }`, `set` becomes `{ id, 
 
 ### Methods
 
-All methods return `{ data, pagination?, usage }`. `pagination` is present on list methods (`get`, `search`) and absent on the others.
+All methods return `{ data, pagination?, usage }`. `pagination` is present on list methods (`get`, `search`); on `getByBatch` it carries only `count`, and the other methods omit it.
 
 ```typescript
 // Browse / filter — with no params, this browses; with q/number it searches
@@ -439,9 +440,19 @@ await client.v2.cards.retrieveByTcgplayerSkuId('12345');
 await client.v2.cards.getByBarcode('820650850714');
 
 // Batch — snake_case body keys (a v1 payload needs its keys renamed, not sent as-is).
-// `regions` applies to every item and is sent once.
-await client.v2.cards.getByBatch([{ card_id: '…' }, { tcgplayer_id: '42' }], { regions: ['US'] });
+// `regions`, `include` and `updated_after` apply to the whole batch and go on the query string;
+// a per-item `updated_after` is rejected with a 400.
+const batch = await client.v2.cards.getByBatch([{ card_id: '…' }, { tcgplayer_id: '42' }], {
+  regions: ['US'],
+  include: ['periods.30d'],
+  updated_after: 1760000000,
+});
+// pagination.count is the number of cards returned, not items sent: unmatched items are dropped
+// without an error and duplicates collapse, so compare ids to check completeness.
+console.log(batch.pagination?.count);
 ```
+
+Each market carries `price_status` (`'current'`, `'expired'` or `'unpriced'`) and `last_price`, the value that expired. A `null` `price` is not `$0`; see [Null prices and `priceStatus`](#response-data-object-card-and-variant) for the v1 equivalents.
 
 ### Iterating every page
 
@@ -472,6 +483,8 @@ for (const market of data[0].variants[0].markets) {
 }
 ```
 
+Only `NA` and its country code `US` return data today; any other region throws `RegionNotAvailableError`, whose `.available` lists the live codes. Omitting `regions` gives a single USD market with v1's pricing. The API docs call that default `NA`, but the live API echoes it as `region: 'US'`, which is what the SDK's `V2_DEFAULT_REGION` reports. Pass `regions: ['NA']` if your code matches on the region code; the prices are the same. Extra regions and `graded: 'include'` carry a cost surcharge; exact figures are set at launch.
+
 #### Language filtering
 
 Narrow each card's `variants[]` to specific language(s). A card is never dropped — it comes back with an empty `variants[]` if none of its variants match. Pagination counts (`meta.total`) are unaffected.
@@ -485,7 +498,7 @@ const jpCards = await client.v2.cards.get({
 });
 
 // Or use the typed constant to avoid typos:
-import { CARD_LANGUAGES } from 'justtcg';
+import { CARD_LANGUAGES } from 'justtcg-js';
 const multiLangCards = await client.v2.cards.get({
   game: 'pokemon',
   language: [CARD_LANGUAGES[0], CARD_LANGUAGES[1]], // English, Japanese
@@ -493,8 +506,6 @@ const multiLangCards = await client.v2.cards.get({
 ```
 
 The same `language` parameter is available on `v2.cards.search()`, `v2.cards.retrieve()`, and `v1.cards.get()` / `v1.cards.search()`. It is ignored by `v2.cards.retrieveVariant()`, which always returns the one variant you asked for.
-
-Only `NA` (or its country code `US`) returns data today; any other region throws `RegionNotAvailableError`. Omitting `regions` gives a single USD market with v1's pricing. The docs call that default `NA`, but the live API currently echoes it as `region: 'US'`, so pass `regions: ['NA']` if your code matches on the region code. Extra regions and `graded: 'include'` carry a cost surcharge; exact figures are set at launch.
 
 ### Migrating without rewriting your types
 
@@ -519,7 +530,7 @@ Two things deliberately don't round-trip: graded variants are **dropped** unless
 
 The SDK surfaces errors in two primary ways: **thrown exceptions** for critical SDK issues and an **`error` property** on the response object for API issues.
 
-> **v2 note:** v2 never uses the `error` property — it always throws a typed exception on failure. The classes are exported (`JustTCGError` and its subclasses `AuthenticationError` (and its subclass `SubscriptionRequiredError`), `ValidationError`, `RegionNotAvailableError`, `NotFoundError`, `RateLimitError`, `ApiError`) so you can branch with `instanceof`. Each carries `.status`, `.code`, and the raw `.problem` body; `RateLimitError` adds `.retryAfter`, `RegionNotAvailableError` adds `.available`, `SubscriptionRequiredError` adds `.reactivateUrl`.
+> **v2 note:** v2 never uses the `error` property — it always throws a typed exception on failure. The classes are exported (`JustTCGError` and its subclasses `AuthenticationError` (and its subclass `SubscriptionRequiredError`), `ValidationError`, `RegionNotAvailableError`, `NotFoundError`, `RateLimitError`, `ApiError`) so you can branch with `instanceof`. Each carries `.status`, `.code`, and the raw `.problem` body; `RateLimitError` adds `.retryAfter`, `ValidationError` adds `.parameter`, `RegionNotAvailableError` adds `.available`, `SubscriptionRequiredError` adds `.reactivateUrl`.
 >
 > ```typescript
 > import { NotFoundError, RateLimitError } from 'justtcg-js';
@@ -540,6 +551,7 @@ Critical errors that happen at the SDK level will be thrown as a JavaScript `Err
 **Common Causes:**
     
 -   **Authentication Failure (401):** The API key is missing.
+-   **Inactive Subscription (403 `SUBSCRIPTION_REQUIRED`):** The key is valid but its plan is not active. This throws `SubscriptionRequiredError` (a subclass of `AuthenticationError`) on v1 and v2 alike; `.reactivateUrl` is the link that resubscribes to that plan.
 -   **Invalid Parameter Value:** Providing an unknown value for a parameter like `orderBy`.
 
 **Example:**
@@ -596,6 +608,7 @@ For the v2 API (public beta):
 npx ts-node examples/v2-quickstart.ts           # search, direct lookup, localized pricing
 npx ts-node examples/v2-iterate-and-graded.ts   # cursor iteration and graded cards
 npx ts-node examples/v2-migrate-from-v1.ts      # toV1Cards adapter and typed errors
+npx ts-node examples/v2-barcode-lookup.ts       # sealed product by UPC/EAN barcode
 ```
 
 ## License
