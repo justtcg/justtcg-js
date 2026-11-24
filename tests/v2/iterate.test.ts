@@ -19,6 +19,7 @@ function card(name: string): V2Card {
     rarity: null,
     external_ids: { tcgplayer: null, scryfall: null, mtgjson: null },
     details: null,
+    print_details: null,
     variants: [],
   };
 }

@@ -170,20 +170,44 @@ export interface V2Market {
   price: number | null;
   /**
    * Why `price` is what it is: `'current'`, `'expired'` (the last price aged out, see `last_price`)
-   * or `'unpriced'` (never priced). Graded variants are only ever `'current'` or `'unpriced'`.
-   * v1: `priceStatus`. See https://justtcg.com/docs/thin-markets.
+   * or `'unpriced'` (never priced). v1: `priceStatus`.
+   *
+   * Raw and graded variants expire by different rules:
+   *
+   * - **Raw**: the market stopped reporting the variant. A price expires after 14 days without a
+   *   report if it is $100 or more, or if it collapsed below 10% of the 180-day median.
+   * - **Graded** (since 2026-10-30): the price is the weighted median of the slab's sales in the
+   *   last 90 days, with newer sales counting more. It is always one of the actual sale prices, and
+   *   for a slab with one sale it is that sale. It expires when the most recent sale is more than
+   *   90 days old: see `last_sale_at` and `price_expires_at`.
+   *
+   * See https://justtcg.com/docs/thin-markets.
    */
   price_status: PriceStatus;
   /**
    * The last observed price, in `currency`, when `price_status` is `'expired'`; `null` otherwise.
-   * v1: `lastKnownPrice`.
+   * For an expired graded market this is the price that aged out. v1: `lastKnownPrice`.
    */
   last_price: number | null;
   /**
    * When `price` was last observed, as a Unix timestamp in seconds. For an expired market this is
-   * when the last price was seen.
+   * when the last price was seen. For a graded market it is the time of the sale behind the price,
+   * and it stays at that time after the price expires.
    */
   updated_at: number | null;
+  /**
+   * Graded variants only: the Unix timestamp (seconds) of the slab's most recent sale, which expiry
+   * counts from. `null` on raw variants and on graded variants that have never sold. No v1
+   * equivalent, so `toV1Variant` drops it.
+   */
+  last_sale_at: number | null;
+  /**
+   * Graded variants only: the Unix timestamp (seconds) when the most recent sale ages out
+   * (`last_sale_at` + 90 days). In the past once `price_status` is `'expired'`. `null` on raw
+   * variants and on graded variants that have never sold. No v1 equivalent, so `toV1Variant` drops
+   * it.
+   */
+  price_expires_at: number | null;
   /** Percent change over the last 24 hours in this region. v1: `priceChange24hr`. */
   change_24h_pct: number | null;
   /** Aggregate statistics keyed by window. Only the windows you requested are present. */
@@ -245,24 +269,272 @@ export interface V2Card {
   };
   /** Additional details about the card. */
   details: string | null;
+  /**
+   * How this product is printed (Magic: The Gathering only). Always present, on by default and
+   * free; `null` for every other game and for Magic products with no MTGJSON match. Added
+   * 2026-11-04.
+   */
+  print_details: V2PrintDetails | null;
+  /**
+   * Format legality, artist and game facts. Only present when you ask for it with
+   * `include: ['gameplay']` (absent otherwise); `null` when the API holds no gameplay data for the
+   * card. Added 2026-11-04.
+   *
+   * `include` replaces the defaults, so list `periods` and `price_history` too if you still want
+   * them: `include: ['periods', 'price_history', 'gameplay']`.
+   */
+  gameplay?: V2Gameplay | null;
   /** The variants of this card — raw, graded, or both, depending on `graded`. */
   variants: V2Variant[];
 }
 
+// --- print details ---------------------------------------------------------------------------
+
+/** An art or frame treatment in {@link V2PrintDetails.treatments}. */
+export type V2PrintTreatment =
+  | 'borderless'
+  | 'extended_art'
+  | 'showcase'
+  | 'full_art'
+  | 'textless'
+  | 'japanese_alternate_art';
+
+/**
+ * Wizards of the Coast's name for a borderless sub-treatment. Covers FINAL FANTASY and FINAL
+ * FANTASY Commander for now.
+ */
+export type V2PrintStyle = 'woodblock' | 'character' | 'artist';
+
+/** A product finish, in {@link V2PrintDetails.finishes} and Magic gameplay facts. */
+export type V2Finish = 'nonfoil' | 'foil' | 'etched';
+
+/**
+ * What a product's Foil variants are. The known values are listed for autocompletion, but the set
+ * is open-ended: when MTGJSON doesn't name the foil, the API reads the product name's
+ * `"(... Foil)"` suffix, so new values keep appearing. `special_foil` is a non-traditional foil
+ * that neither source names.
+ */
+export type V2FoilType =
+  | 'foil'
+  | 'etched'
+  | 'surge_foil'
+  | 'rainbow_foil'
+  | 'galaxy_foil'
+  | 'double_rainbow_foil'
+  | 'confetti_foil'
+  | 'halo_foil'
+  | 'raised_foil'
+  | 'step_and_compleat_foil'
+  | 'chocobo_track_foil'
+  | 'textured_foil'
+  | 'gilded_foil'
+  | 'out_of_sight_foil'
+  | 'black_and_white_foil'
+  | 'special_foil'
+  // Keeps autocompletion for the names above while accepting any other string.
+  | (string & {});
+
+/**
+ * How a Magic: The Gathering product is printed, as fields instead of name suffixes. Values are per
+ * product, so a card and its `"(Surge Foil)"` listing each get their own.
+ *
+ * See https://justtcg.com/docs/schema/card#v2-print-details.
+ */
+export interface V2PrintDetails {
+  /** Where the data comes from. Always MTGJSON. */
+  source: 'mtgjson';
+  /** Art and frame treatments, in this order. `[]` is a regular frame. */
+  treatments: V2PrintTreatment[];
+  /**
+   * Wizards of the Coast's name for a borderless sub-treatment (FINAL FANTASY and FINAL FANTASY
+   * Commander). `null` for every other product.
+   */
+  style: V2PrintStyle | null;
+  /** What this product's Foil variants are, e.g. `surge_foil`. `null` means no foil printing. */
+  foil_type: V2FoilType | null;
+  /** Serial-numbered printing. */
+  serialized: boolean;
+  /** Wizards of the Coast's Booster Fun flag for collector treatments. */
+  booster_fun: boolean;
+  /** Promo printing (prerelease, promo pack and similar). */
+  promo: boolean;
+  /** This product's finishes. */
+  finishes: V2Finish[];
+  /** The border color, e.g. `black`, `borderless`, `white`, `silver`, `gold`. */
+  border_color: string | null;
+  /** The frame version, e.g. `1993`, `1997`, `2003`, `2015`, `future`. */
+  frame_version: string | null;
+  /** MTGJSON's raw frame effect codes, e.g. `inverted`. */
+  frame_effects: string[];
+  /**
+   * MTGJSON's raw promo codes for the printing. These may describe a sibling product, so prefer
+   * `foil_type` and `finishes` for this product's own foil.
+   */
+  promo_types: string[];
+}
+
+// --- gameplay --------------------------------------------------------------------------------
+
+/** A card's status in one format. A format that is not listed is not legal. */
+export type V2Legality = 'legal' | 'banned' | 'restricted';
+
+/** One face of a multi-faced Magic card, in {@link V2MtgGameplayFacts.faces}. */
+export interface V2MtgGameplayFace {
+  face_name?: string;
+  /** Which side this face is, e.g. `a` or `b`. */
+  side?: string;
+  mana_cost?: string;
+  mana_value?: number;
+  colors?: string[];
+  color_indicator?: string[];
+  power?: string;
+  toughness?: string;
+  loyalty?: string;
+  defense?: string;
+  artist?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Magic: The Gathering facts, from MTGJSON. Every field is optional: a fact the card does not have
+ * is omitted. The index signature keeps facts the API adds later readable.
+ */
+export interface V2MtgGameplayFacts {
+  /** The mana cost, e.g. `{1}{R}`. */
+  mana_cost?: string;
+  /** Mana value (converted mana cost). */
+  mana_value?: number;
+  /** Colors, as `W`, `U`, `B`, `R`, `G`. */
+  colors?: string[];
+  /** Color identity, as used by Commander. */
+  color_identity?: string[];
+  /** Color indicator, on cards that have one. */
+  color_indicator?: string[];
+  /** Power, as printed: a string, since it can be `*` or `1+*`. */
+  power?: string;
+  /** Toughness, as printed. */
+  toughness?: string;
+  /** Starting loyalty (planeswalkers). */
+  loyalty?: string;
+  /** Defense (battles). */
+  defense?: string;
+  /** e.g. `["Legendary"]`. */
+  supertypes?: string[];
+  /** e.g. `["Creature"]`. */
+  types?: string[];
+  /** e.g. `["Human", "Shaman"]`. */
+  subtypes?: string[];
+  /** e.g. `["Flying"]`. */
+  keywords?: string[];
+  /** The card layout, e.g. `normal`, `transform`, `split`, `adventure`. */
+  layout?: string;
+  /** The finishes the card is printed in. */
+  finishes?: V2Finish[];
+  /** Per-face facts, for multi-faced cards. */
+  faces?: V2MtgGameplayFace[];
+  [key: string]: unknown;
+}
+
+/** A weakness or resistance on a Pokémon card, e.g. `{ type: 'Fire', value: '×2' }`. */
+export interface V2PokemonTypeModifier {
+  type: string;
+  value: string;
+}
+
+/** One attack's cost and damage. Attack text is never included. */
+export interface V2PokemonAttack {
+  /** Energy cost, e.g. `["Psychic", "Colorless"]`. */
+  cost: string[];
+  /** Damage: a number, or a string such as `"30+"` or `"20×"`. Absent for attacks with none. */
+  damage?: number | string;
+  [key: string]: unknown;
+}
+
+/**
+ * Pokémon and Pokémon Japan facts, from TCGdex. Every field is optional: a fact the card does not
+ * have is omitted. The index signature keeps facts the API adds later readable.
+ */
+export interface V2PokemonGameplayFacts {
+  /** `Pokemon`, `Trainer` or `Energy`. */
+  category?: string;
+  /** Hit points. */
+  hp?: number;
+  /** Energy types, e.g. `["Psychic"]`. */
+  types?: string[];
+  /** e.g. `Basic`, `Stage1`. */
+  stage?: string;
+  /** The Pokémon it evolves from, in the card's language. */
+  evolve_from?: string;
+  weaknesses?: V2PokemonTypeModifier[];
+  resistances?: V2PokemonTypeModifier[];
+  /** Retreat cost. */
+  retreat?: number;
+  attacks?: V2PokemonAttack[];
+  /** The regulation mark, e.g. `H`. */
+  regulation_mark?: string;
+  /** The rarity as TCGdex names it. */
+  rarity?: string;
+  /** National Pokédex numbers. */
+  dex_ids?: number[] | null;
+  [key: string]: unknown;
+}
+
+/** Fields every {@link V2Gameplay} carries, whatever its source. */
+interface V2GameplayBase {
+  /**
+   * Format to status, e.g. `{ standard: 'legal' }`. A format not listed is not legal, so `{}`
+   * means legal nowhere. Always `null` for Pokémon Japan, whose source applies international
+   * rotation to Japanese printings.
+   */
+  legalities: Record<string, V2Legality> | null;
+  /** The credited artist or illustrator. */
+  artist: string | null;
+}
+
+/** Gameplay data for a Magic: The Gathering card. */
+export interface V2MtgGameplay extends V2GameplayBase {
+  source: 'mtgjson';
+  facts: V2MtgGameplayFacts;
+}
+
+/** Gameplay data for a Pokémon or Pokémon Japan card. */
+export interface V2PokemonGameplay extends V2GameplayBase {
+  source: 'tcgdex';
+  facts: V2PokemonGameplayFacts;
+}
+
+/**
+ * The `gameplay` block requested with `include: ['gameplay']`: format legality, artist and game
+ * facts. Facts only: no rules text, flavor text, attack text or images.
+ *
+ * Narrow on `source` to read the game's facts:
+ *
+ * ```ts
+ * if (card.gameplay?.source === 'mtgjson') console.log(card.gameplay.facts.mana_value);
+ * if (card.gameplay?.source === 'tcgdex') console.log(card.gameplay.facts.hp);
+ * ```
+ *
+ * See https://justtcg.com/docs/schema/card#v2-gameplay and https://justtcg.com/docs/attributions.
+ */
+export type V2Gameplay = V2MtgGameplay | V2PokemonGameplay;
+
 // --- request params --------------------------------------------------------------------------
 
 /**
- * A component to expand, optionally narrowed to one window: `periods`, `periods.30d`,
- * `price_history`, `price_history.90d`.
+ * A component to expand: `periods`, `periods.30d`, `price_history`, `price_history.90d`, or
+ * `gameplay` (format legality, artist and game facts, see {@link V2Gameplay}).
  *
  * Passing `include` **replaces** the default set rather than adding to it. The default is
- * `periods` (all windows) plus `price_history.7d`, so `include: ['price_history']` drops periods.
+ * `periods` (all windows) plus `price_history.7d`, so `include: ['price_history']` drops periods
+ * and `include: ['gameplay']` drops both. Send `['periods', 'price_history', 'gameplay']` to keep
+ * them.
  */
 export type V2IncludeComponent =
   | 'periods'
   | `periods.${V2PeriodWindow}`
   | 'price_history'
-  | `price_history.${V2PriceHistoryWindow}`;
+  | `price_history.${V2PriceHistoryWindow}`
+  | 'gameplay';
 
 /**
  * The fields v2 can sort by, always read from the primary market (`markets[0]`).
@@ -319,7 +591,10 @@ export interface V2CardsParams {
    * a grade alone cannot be resolved to a canonical seed.
    */
   grade?: readonly (string | number)[];
-  /** Which components to expand. Replaces the default set entirely. */
+  /**
+   * Which components to expand. Replaces the default set entirely: `['gameplay']` alone drops
+   * periods and price history. See {@link V2IncludeComponent}.
+   */
   include?: readonly V2IncludeComponent[];
   /**
    * Free-text search against the card name. A 12–14 digit barcode is matched as a `gtin` first,
@@ -337,6 +612,12 @@ export interface V2CardsParams {
    *
    * A price expiry counts as an update, so an expired market is returned once with a `null` `price`
    * and `price_status: 'expired'`.
+   *
+   * Since 2026-10-30 graded variants are returned too: when a new sale is recorded, when a sale
+   * moves out of one of their `periods` windows, and when their price expires. Graded sales can
+   * reach the API days after they happen, and a variant counts as changed when the sale is
+   * recorded, so a graded variant can come back with an `updated_at` older than your last sync.
+   * Key your sync on the response, not on `updated_at`.
    */
   updated_after?: number;
   /** Filter to these conditions. */
@@ -477,13 +758,15 @@ export interface V2BatchOptions {
   /** Region codes in priority order. Defaults to {@link V2_DEFAULT_REGION}. */
   regions?: readonly V2RegionCode[];
   /**
-   * Which components to expand on every returned card. Replaces the default set entirely, as on
-   * `GET /v2/cards`.
+   * Which components to expand on every returned card, including `gameplay`. Replaces the default
+   * set entirely, as on `GET /v2/cards`.
    */
   include?: readonly V2IncludeComponent[];
   /**
    * Only return variants updated after this Unix timestamp (seconds). Must be set here rather than
-   * per item; a per-item `updated_after` is rejected with a `400`.
+   * per item; a per-item `updated_after` is rejected with a `400`. Graded variants are returned
+   * too, and their `updated_at` can be older than your last sync: see
+   * {@link V2CardsParams.updated_after}.
    */
   updated_after?: number;
 }

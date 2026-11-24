@@ -322,8 +322,9 @@ export interface JustTCGApiResponse<T> {
  * - `'expired'`: the market stopped reporting the variant and the last price aged out, so the price
  *   is `null` and the last observed value is carried alongside it. A price expires after 14 days
  *   without a report if it is $100 or more, or if it collapsed below 10% of the variant's 180-day
- *   median. Price history and statistics are never changed by an expiry. Graded variants never
- *   expire.
+ *   median. Price history and statistics are never changed by an expiry. On the v2 API a graded
+ *   variant's price (the weighted median of its sales in the last 90 days) expires when its most
+ *   recent sale is more than 90 days old; see `V2Market.last_sale_at` and `price_expires_at`.
  * - `'unpriced'`: this condition has never had a price.
  *
  * See https://justtcg.com/docs/thin-markets.
