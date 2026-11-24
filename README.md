@@ -10,7 +10,7 @@ The official JavaScript/TypeScript SDK for the JustTCG API. Access real-time and
 
 -   **✅ Modern & Type-Safe:** Written entirely in TypeScript for a superior developer experience with static typing and autocomplete.
 -   **🔐 Versioned API Access:** Clean, explicit access to API versions via `client.v1` and `client.v2`, ensuring your integrations are stable and future-proof.
--   **🌍 v2 (public beta):** Localized pricing across regions, graded cards, TCGplayer and barcode lookups, cursor pagination with `iterate()`, and a `toV1Cards` adapter so you can migrate without rewriting your types. See [Using v2](#using-v2-public-beta).
+-   **🌍 v2 (public beta):** Localized pricing across regions, graded cards, Magic print details and gameplay facts, TCGplayer and barcode lookups, cursor pagination with `iterate()`, and a `toV1Cards` adapter so you can migrate without rewriting your types. See [Using v2](#using-v2-public-beta).
 -   **🧼 Clean Data Models:** Raw API responses are automatically transformed into clean, intuitive JavaScript objects (e.g., prices in dollars, camelCase properties).
 -   **🚨 Robust Error Handling:** Predictable, typed errors allow you to gracefully handle API issues like invalid keys or rate limits.
 -   **🚀 Zero Dependencies:** A lightweight package with no production dependencies for fast and secure installation.
@@ -368,7 +368,8 @@ reporting it. A price expires after 14 days without a report if it is $100 or mo
 collapsed below 10% of the variant's recent median. The value that expired stays in
 `lastKnownPrice`, and price history and statistics are untouched. An expiry counts as an update,
 so `updated_after` returns the expired variant once with a `null` price. Handle `null` rather than
-treating it as `$0`. In v2 the same fields are `markets[].price_status` and `markets[].last_price`.
+treating it as `$0`. In v2 the same fields are `markets[].price_status` and `markets[].last_price`,
+and graded prices expire too: 90 days after the slab's most recent sale.
 See [Thin markets and price expiry](https://justtcg.com/docs/thin-markets).
 
 **`PriceHistoryEntry` Object:**
@@ -454,6 +455,28 @@ console.log(batch.pagination?.count);
 
 Each market carries `price_status` (`'current'`, `'expired'` or `'unpriced'`) and `last_price`, the value that expired. A `null` `price` is not `$0`; see [Null prices and `priceStatus`](#response-data-object-card-and-variant) for the v1 equivalents.
 
+A graded price is the weighted median of the slab's sales in the last 90 days (newer sales count more, and it is always one of the actual sale prices). It expires 90 days after the most recent sale: graded markets carry `last_sale_at` and `price_expires_at` (both `null` on raw variants). `updated_after` returns graded variants too, when a sale is recorded, leaves a `periods` window or expires. Sales can arrive days late, so a graded variant can come back with an `updated_at` older than your last sync.
+
+### Print details and gameplay
+
+Every card carries `print_details`: for Magic, how the product is printed (`treatments`, `foil_type`, `serialized`, `booster_fun`, `promo`, `finishes`, plus MTGJSON's frame and promo codes); `null` for other games. Add `'gameplay'` to `include` for format legality, artist and game facts. `include` **replaces** the defaults, so list `periods` and `price_history` too if you still want them.
+
+```typescript
+const { data } = await client.v2.cards.search('lightning bolt', {
+  game: 'magic-the-gathering',
+  include: ['periods', 'price_history', 'gameplay'],
+});
+
+const card = data[0];
+console.log(card.print_details?.treatments, card.print_details?.foil_type); // ['borderless'] 'surge_foil'
+
+// `source` selects the shape of `facts`: MTGJSON for Magic, TCGdex for Pokémon.
+if (card.gameplay?.source === 'mtgjson') console.log(card.gameplay.facts.mana_value);
+if (card.gameplay?.source === 'tcgdex') console.log(card.gameplay.facts.hp);
+```
+
+`foil_type` is an open string: new named foils keep appearing, so match on the values you care about rather than switching exhaustively. `gameplay` is `null` when the API holds no gameplay data for a card, and its `legalities` is `null` for Pokémon Japan.
+
 ### Iterating every page
 
 `iterate()` walks the entire result set one card at a time, fetching pages lazily — breaking out of the loop stops the requests, so it's safe to point at a large set. Use `iteratePages()` when you need the page boundaries or want to watch `usage` as you go.
@@ -522,7 +545,7 @@ const legacy: Card[] = toV1Cards(data); // flat price, avgPrice, game as a strin
 const ukPriced = toV1Cards(data, { region: 'UK' });
 ```
 
-Two things deliberately don't round-trip: graded variants are **dropped** unless you pass `{ includeGraded: true }` (v1 was raw-only), and `printing` loses the `" - <Language>"` suffix v1 appended for non-English cards (v2 carries `language` separately). Use `toV1Card` for a single card and `toV1Variant` for a single variant.
+Two things deliberately don't round-trip: graded variants are **dropped** unless you pass `{ includeGraded: true }` (v1 was raw-only), and `printing` loses the `" - <Language>"` suffix v1 appended for non-English cards (v2 carries `language` separately). Fields v1 has no home for (`print_details`, `gameplay`, `periods.*.sales_count`, and graded `last_sale_at` / `price_expires_at`) are dropped. Use `toV1Card` for a single card and `toV1Variant` for a single variant.
 
 > **Note:** On v2, GET supports TCGplayer lookups (`retrieveByTcgplayerId`, `retrieveByTcgplayerSkuId`) and barcodes (`getByBarcode`). MTGJSON and Scryfall ids are not exposed on GET yet, so use `getByBatch` (`mtgjson_id`, `scryfall_id`) or `client.v1` for those.
 
@@ -530,7 +553,7 @@ Two things deliberately don't round-trip: graded variants are **dropped** unless
 
 The SDK surfaces errors in two primary ways: **thrown exceptions** for critical SDK issues and an **`error` property** on the response object for API issues.
 
-> **v2 note:** v2 never uses the `error` property — it always throws a typed exception on failure. The classes are exported (`JustTCGError` and its subclasses `AuthenticationError` (and its subclass `SubscriptionRequiredError`), `ValidationError`, `RegionNotAvailableError`, `NotFoundError`, `RateLimitError`, `ApiError`) so you can branch with `instanceof`. Each carries `.status`, `.code`, and the raw `.problem` body; `RateLimitError` adds `.retryAfter`, `ValidationError` adds `.parameter`, `RegionNotAvailableError` adds `.available`, `SubscriptionRequiredError` adds `.reactivateUrl`.
+> **v2 note:** v2 never uses the `error` property — it always throws a typed exception on failure. The classes are exported (`JustTCGError` and its subclasses `AuthenticationError` (and its subclass `SubscriptionRequiredError`), `ValidationError`, `RegionNotAvailableError`, `NotFoundError`, `EndpointRemovedError`, `RateLimitError`, `ApiError`) so you can branch with `instanceof`. Each carries `.status`, `.code`, and the raw `.problem` body; `RateLimitError` adds `.retryAfter`, `ValidationError` adds `.parameter`, `RegionNotAvailableError` adds `.available`, `SubscriptionRequiredError` adds `.reactivateUrl`.
 >
 > ```typescript
 > import { NotFoundError, RateLimitError } from 'justtcg-js';
@@ -552,6 +575,7 @@ Critical errors that happen at the SDK level will be thrown as a JavaScript `Err
     
 -   **Authentication Failure (401):** The API key is missing.
 -   **Inactive Subscription (403 `SUBSCRIPTION_REQUIRED`):** The key is valid but its plan is not active. This throws `SubscriptionRequiredError` (a subclass of `AuthenticationError`) on v1 and v2 alike; `.reactivateUrl` is the link that resubscribes to that plan.
+-   **Removed Endpoint (410 `ENDPOINT_REMOVED`):** Throws `EndpointRemovedError`. Since 2026-11-03 `/v1/variants` and `/v1/cards-search` return it; the SDK never calls them, and `client.v1.cards` covers both.
 -   **Invalid Parameter Value:** Providing an unknown value for a parameter like `orderBy`.
 
 **Example:**
@@ -609,6 +633,7 @@ npx ts-node examples/v2-quickstart.ts           # search, direct lookup, localiz
 npx ts-node examples/v2-iterate-and-graded.ts   # cursor iteration and graded cards
 npx ts-node examples/v2-migrate-from-v1.ts      # toV1Cards adapter and typed errors
 npx ts-node examples/v2-barcode-lookup.ts       # sealed product by UPC/EAN barcode
+npx ts-node examples/v2-gameplay-and-print-details.ts  # print_details, include=gameplay, graded expiry
 ```
 
 ## License

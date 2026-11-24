@@ -117,6 +117,11 @@ function selectMarket(markets: V2Market[], region?: string): V2Market | undefine
  * to flatten, the variant is reported as `'unpriced'` in that region. A recorded payload from before
  * the API sent `price_status` gets `'current'` or `'unpriced'` from whether it has a price.
  *
+ * An expired graded market (kept with `includeGraded`) maps like an expired raw one: `price` is
+ * `null`, `priceStatus` is `'expired'`, `lastKnownPrice` is the sale that aged out, and
+ * `lastUpdated` is the time of that sale. The graded-only `last_sale_at` and `price_expires_at`
+ * have no v1 field and are dropped.
+ *
  * @param variant The v2 variant.
  * @param options Which market to flatten. See {@link ToV1Options}.
  */
@@ -170,13 +175,15 @@ export function toV1Variant(variant: V2Variant, options: ToV1Options = {}): Vari
  * const legacy: Card[] = toV1Cards(data);
  * ```
  *
- * Three things do not round-trip, all harmless:
+ * These do not round-trip, all harmless:
  *
  * - **`printing` loses the `" - <Language>"` suffix** v1 appended for non-English cards. v2 strips
  *   it because `language` already carries the same information, and re-appending it here would
  *   fabricate a suffix for cards that never had one.
  * - **Graded variants are dropped** unless `includeGraded` is set, because v1 never returned them.
  * - **`periods.*.sales_count` is dropped**, because v1 has no field for it.
+ * - **v2-only fields are dropped**: `print_details`, `gameplay`, and each market's `last_sale_at`
+ *   and `price_expires_at`. v1 has no home for any of them.
  *
  * @param card The v2 card.
  * @param options Which market to flatten, and whether to keep graded variants.

@@ -19,6 +19,7 @@ const V2: V2Card = {
   rarity: 'Rare Holo',
   external_ids: { tcgplayer: '42', scryfall: null, mtgjson: null },
   details: 'Shadowless',
+  print_details: null,
   variants: [
     {
       id: 'e72a67fe-922e-5662-bcfc-e8cb509f8220',
@@ -36,6 +37,8 @@ const V2: V2Card = {
           price: 420.69,
           price_status: 'current',
           last_price: null,
+          last_sale_at: null,
+          price_expires_at: null,
           updated_at: 1_763_000_000,
           change_24h_pct: 2.5,
           periods: {
@@ -193,6 +196,9 @@ const GRADED: V2Variant = {
       price: 99_000,
       price_status: 'current',
       last_price: null,
+      // A graded price is backed by a sale and ages out 90 days after it.
+      last_sale_at: 1_763_000_000,
+      price_expires_at: 1_763_000_000 + 90 * 86_400,
       updated_at: 1_763_000_000,
       change_24h_pct: null,
       periods: {},
@@ -204,6 +210,38 @@ const GRADED: V2Variant = {
 describe('toV1Card', () => {
   it('reproduces the v1 payload exactly', () => {
     expect(toV1Card(V2)).toEqual(V1);
+  });
+
+  it('drops print_details and gameplay, which have no v1 field', () => {
+    const magic: V2Card = {
+      ...V2,
+      print_details: {
+        source: 'mtgjson',
+        treatments: ['borderless'],
+        style: 'character',
+        foil_type: 'surge_foil',
+        serialized: false,
+        booster_fun: true,
+        promo: false,
+        finishes: ['nonfoil', 'foil'],
+        border_color: 'borderless',
+        frame_version: '2015',
+        frame_effects: ['inverted'],
+        promo_types: ['surgefoil'],
+      },
+      gameplay: {
+        source: 'mtgjson',
+        legalities: { commander: 'legal', modern: 'banned' },
+        artist: 'Somebody',
+        facts: { mana_cost: '{R}', mana_value: 1, colors: ['R'] },
+      },
+    };
+
+    const result = toV1Card(magic);
+
+    expect(result).toEqual(V1);
+    expect('print_details' in result).toBe(false);
+    expect('gameplay' in result).toBe(false);
   });
 
   it('swaps id and uuid back to their v1 meanings', () => {
@@ -335,6 +373,8 @@ describe('toV1Card regions', () => {
             price: 389.0,
             price_status: 'current',
             last_price: null,
+            last_sale_at: null,
+            price_expires_at: null,
             updated_at: 1_762_000_000,
             change_24h_pct: -1.1,
             periods: { '7d': { avg: 392.0 } },
@@ -408,6 +448,8 @@ describe('toV1Variant price status', () => {
           price: null,
           price_status: 'unpriced',
           last_price: null,
+          last_sale_at: null,
+          price_expires_at: null,
           updated_at: null,
           price_history: [],
           periods: {},
@@ -444,11 +486,38 @@ describe('toV1Variant price status', () => {
     expect(variant.lastKnownPrice).toBe(389.0);
   });
 
-  it('keeps a graded variant current', () => {
+  it('keeps a current graded variant current', () => {
     const variant = toV1Variant(GRADED);
 
     expect(variant.priceStatus).toBe('current');
     expect(variant.lastKnownPrice).toBeNull();
+  });
+
+  it('maps an expired graded variant and drops the graded-only timestamps', () => {
+    const variant = toV1Variant({
+      ...GRADED,
+      markets: [
+        {
+          ...GRADED.markets[0],
+          price: null,
+          price_status: 'expired',
+          last_price: 99_000,
+          // updated_at stays the time of the sale after the price expires.
+          updated_at: 1_755_000_000,
+          last_sale_at: 1_755_000_000,
+          price_expires_at: 1_755_000_000 + 90 * 86_400,
+        },
+      ],
+    });
+
+    expect(variant.price).toBeNull();
+    expect(variant.priceStatus).toBe('expired');
+    expect(variant.lastKnownPrice).toBe(99_000);
+    expect(variant.lastUpdated).toBe(1_755_000_000);
+    expect(variant.condition).toBe('PSA 10');
+    expect('last_sale_at' in variant).toBe(false);
+    expect('price_expires_at' in variant).toBe(false);
+    expect('lastSaleAt' in variant).toBe(false);
   });
 
   it('derives a status for a recorded payload that predates price_status', () => {

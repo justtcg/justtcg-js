@@ -112,6 +112,14 @@ export class RateLimitError extends JustTCGError {
   }
 }
 
+/**
+ * The endpoint has been removed from the API (410 `ENDPOINT_REMOVED`). Since 2026-11-03 this is what
+ * `/v1/variants` and `/v1/cards-search` return; use `/v1/cards` (`client.v1.cards`) instead. The
+ * SDK itself never calls a removed endpoint, so seeing this means a request was built by hand or an
+ * endpoint was retired after this SDK version shipped.
+ */
+export class EndpointRemovedError extends JustTCGError {}
+
 /** Any other API failure, including 5xx responses. */
 export class ApiError extends JustTCGError {}
 
@@ -135,6 +143,7 @@ function problemSlug(type: string): string {
 }
 
 const SUBSCRIPTION_REQUIRED = 'SUBSCRIPTION_REQUIRED';
+const ENDPOINT_REMOVED = 'ENDPOINT_REMOVED';
 
 /** Read `reactivate_url` from `details` (v1 and documented shape) or a top-level extension member. */
 function reactivateUrl(body: Record<string, unknown>): string | undefined {
@@ -172,6 +181,9 @@ export function createApiError(status: number, body: unknown, headers?: Headers)
     if (code === SUBSCRIPTION_REQUIRED || slug === 'subscription-required') {
       return new SubscriptionRequiredError(message, { ...options, reactivateUrl: reactivateUrl(body) });
     }
+    if (code === ENDPOINT_REMOVED || slug === 'endpoint-removed') {
+      return new EndpointRemovedError(message, options);
+    }
 
     switch (slug) {
       case 'region-not-available':
@@ -197,6 +209,7 @@ export function createApiError(status: number, body: unknown, headers?: Headers)
   if (code === SUBSCRIPTION_REQUIRED) {
     return new SubscriptionRequiredError(message, { status, code, reactivateUrl: reactivateUrl(b) });
   }
+  if (code === ENDPOINT_REMOVED) return new EndpointRemovedError(message, { status, code });
   return byStatus(status, message, { status, code }, headers);
 }
 
@@ -208,6 +221,7 @@ function byStatus(
 ): JustTCGError {
   if (status === 401 || status === 403) return new AuthenticationError(message, options);
   if (status === 404) return new NotFoundError(message, options);
+  if (status === 410) return new EndpointRemovedError(message, options);
   if (status === 429) {
     return new RateLimitError(message, { ...options, retryAfter: parseRetryAfter(headers) });
   }

@@ -3,6 +3,7 @@ import { HttpClient } from '../../src/core/http-client';
 import {
   ApiError,
   AuthenticationError,
+  EndpointRemovedError,
   NotFoundError,
   RateLimitError,
   RegionNotAvailableError,
@@ -302,6 +303,50 @@ describe('HttpClient', () => {
         );
 
         await expect(client.get('/v2/cards')).rejects.toThrow(NotFoundError);
+      });
+    });
+
+    describe('ENDPOINT_REMOVED', () => {
+      it('maps the v1 { error, code } shape from a removed endpoint', async () => {
+        mockFetch(
+          {
+            error: 'This endpoint has been removed. Use /v1/cards instead.',
+            code: 'ENDPOINT_REMOVED',
+          },
+          { status: 410 },
+        );
+
+        const error = await client.get('/v1/variants').catch((e) => e);
+
+        expect(error).toBeInstanceOf(EndpointRemovedError);
+        expect(error).not.toBeInstanceOf(ValidationError);
+        expect(error.code).toBe('ENDPOINT_REMOVED');
+        expect(error.status).toBe(410);
+        expect(error.message).toBe('This endpoint has been removed. Use /v1/cards instead.');
+      });
+
+      it('maps a problem+json body with the code', async () => {
+        mockFetch(
+          {
+            type: 'https://justtcg.com/docs/errors#endpoint-removed',
+            title: 'Gone',
+            status: 410,
+            detail: 'This endpoint has been removed.',
+            code: 'ENDPOINT_REMOVED',
+          },
+          { ...PROBLEM, status: 410 },
+        );
+
+        const error = await client.get('/v2/cards').catch((e) => e);
+
+        expect(error).toBeInstanceOf(EndpointRemovedError);
+        expect(error.code).toBe('ENDPOINT_REMOVED');
+      });
+
+      it('maps a bare 410 without a code', async () => {
+        mockFetch({ error: 'Gone' }, { status: 410 });
+
+        await expect(client.get('/v1/cards-search')).rejects.toThrow(EndpointRemovedError);
       });
     });
 

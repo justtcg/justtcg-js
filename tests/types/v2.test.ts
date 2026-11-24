@@ -4,8 +4,11 @@ import type {
   GetV2CardsParams,
   V2Card,
   V2CardsResponseBody,
+  V2Gameplay,
   V2IncludeComponent,
+  V2Market,
   V2Period,
+  V2PrintDetails,
 } from '../../src/types/v2';
 import { V2_DEFAULT_REGION, V2_SERVICEABLE_REGIONS } from '../../src/types/v2';
 
@@ -70,6 +73,7 @@ describe('v2 types', () => {
       rarity: 'Rare Holo',
       external_ids: { tcgplayer: '42', scryfall: null, mtgjson: null },
       details: null,
+      print_details: null,
       variants: [
         {
           id: 'e72a67fe-922e-5662-bcfc-e8cb509f8220',
@@ -93,6 +97,8 @@ describe('v2 types', () => {
               price: 12345.67,
               price_status: 'current',
               last_price: null,
+              last_sale_at: null,
+              price_expires_at: null,
               updated_at: 1_763_000_000,
               change_24h_pct: -1.5,
               // Only the requested window is present — absent is not null.
@@ -148,7 +154,86 @@ describe('v2 types', () => {
       'periods.all_time',
       'price_history',
       'price_history.180d',
+      'gameplay',
     ];
-    expect(components).toHaveLength(4);
+    expect(components).toHaveLength(5);
+  });
+
+  it('models an expired graded market with its sale timestamps', () => {
+    const sale = 1_755_000_000;
+    const market: V2Market = {
+      region: 'US',
+      currency: 'USD',
+      price: null,
+      price_status: 'expired',
+      last_price: 812,
+      updated_at: sale,
+      last_sale_at: sale,
+      price_expires_at: sale + 90 * 86_400,
+      change_24h_pct: null,
+      periods: {},
+      price_history: [],
+    };
+
+    expect(market.price_expires_at! - market.last_sale_at!).toBe(90 * 86_400);
+  });
+
+  it('models print_details, with foil_type open to values the SDK does not list', () => {
+    const details: V2PrintDetails = {
+      source: 'mtgjson',
+      treatments: ['borderless', 'extended_art'],
+      style: 'woodblock',
+      foil_type: 'rainbow_foil',
+      serialized: true,
+      booster_fun: true,
+      promo: false,
+      finishes: ['foil'],
+      border_color: 'borderless',
+      frame_version: '2015',
+      frame_effects: [],
+      promo_types: [],
+    };
+    // A foil name the API added after this SDK shipped still type-checks.
+    const newer: V2PrintDetails = { ...details, foil_type: 'some_future_foil', style: null };
+
+    expect(details.treatments).toContain('borderless');
+    expect(newer.foil_type).toBe('some_future_foil');
+  });
+
+  it('narrows gameplay facts on source', () => {
+    const blocks: V2Gameplay[] = [
+      {
+        source: 'mtgjson',
+        legalities: { commander: 'legal', vintage: 'restricted' },
+        artist: 'Christopher Rush',
+        facts: {
+          mana_cost: '{R}',
+          mana_value: 1,
+          colors: ['R'],
+          types: ['Instant'],
+          faces: [{ face_name: 'Front', side: 'a' }],
+        },
+      },
+      {
+        source: 'tcgdex',
+        // Pokémon Japan carries no legality.
+        legalities: null,
+        artist: null,
+        facts: {
+          hp: 130,
+          types: ['Psychic'],
+          stage: 'Basic',
+          retreat: 2,
+          weaknesses: [{ type: 'Darkness', value: '×2' }],
+          attacks: [{ cost: ['Psychic', 'Colorless'], damage: '30+' }],
+          regulation_mark: 'J',
+        },
+      },
+    ];
+
+    const summary = blocks.map(block =>
+      block.source === 'mtgjson' ? block.facts.mana_value : block.facts.hp,
+    );
+    expect(summary).toEqual([1, 130]);
   });
 });

@@ -3,6 +3,73 @@
 All notable changes to this project are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-11-24
+
+> **TypeScript types only:** `V2Card` gains a required `print_details` and `V2Market` gains
+> required `last_sale_at` and `price_expires_at`, because the API sends them on every card and
+> market. Code that builds `V2Card` or `V2Market` object literals (test fixtures, mocks) needs the
+> new fields; `null` is valid for all three. Runtime behaviour is unchanged. Covers API changes
+> from 2026-10-30 to 2026-11-04.
+
+### Added
+
+- **Graded price expiry on v2** (API changelog 2026-10-30,
+  [thin markets](https://justtcg.com/docs/thin-markets#expiry)). A graded price now expires when
+  the slab's most recent sale is more than 90 days old: `price` becomes `null`, `price_status` is
+  `expired`, `last_price` keeps the sale, and `updated_at` stays the time of the sale.
+  - `V2Market` gains `last_sale_at` (when the sale behind the price happened) and
+    `price_expires_at` (`last_sale_at` + 90 days, in the past once expired). Both are graded-only
+    and `null` on raw variants and on slabs that have never sold.
+  - `toV1Variant` maps an expired graded market like an expired raw one and drops both new
+    fields, which have no v1 equivalent.
+- **`print_details` on v2 cards** (API changelog 2026-11-04,
+  [the print_details object](https://justtcg.com/docs/schema/card#v2-print-details)). New
+  `V2PrintDetails` type, matching the OpenAPI `PrintDetailsV2` schema: `source`, `treatments`,
+  `style`, `foil_type`, `serialized`, `booster_fun`, `promo`, `finishes`, `border_color`,
+  `frame_version`, `frame_effects` and `promo_types`. `V2Card.print_details` is always present and
+  `null` outside Magic: The Gathering. Supporting types: `V2PrintTreatment`, `V2PrintStyle`
+  (`woodblock`, `character`, `artist`), `V2Finish` and `V2FoilType`. `V2FoilType` lists the known
+  foil names for autocompletion but accepts any string, because the API adds new ones (such as
+  `out_of_sight_foil` and `black_and_white_foil`) as products appear.
+- **`include: ['gameplay']` on v2** (API changelog 2026-11-04,
+  [the gameplay object](https://justtcg.com/docs/schema/card#v2-gameplay)). `'gameplay'` is now a
+  `V2IncludeComponent`, for `get`, `search`, `retrieve` and `getByBatch`. Each card then carries
+  `gameplay`: format legality, artist and game facts, or `null` when the API holds no gameplay data
+  for the card. It is absent unless requested, so `V2Card.gameplay` is optional.
+  - `V2Gameplay` is a union discriminated on `source`: `V2MtgGameplay` (`'mtgjson'`, facts typed
+    as `V2MtgGameplayFacts`: mana cost and value, colors, power and toughness, type line,
+    keywords, faces) and `V2PokemonGameplay` (`'tcgdex'`, facts typed as `V2PokemonGameplayFacts`:
+    HP, types, stage, weaknesses, resistances, retreat, attack cost and damage, regulation mark).
+    Narrow on `source` to read the facts. Every fact is optional, and the facts types keep an
+    index signature so facts the API adds later stay readable.
+  - `legalities` is `Record<string, V2Legality> | null`. A format not listed is not legal, and
+    Pokémon Japan always has `null`.
+  - `include` replaces the defaults, so `include: ['gameplay']` alone drops periods and price
+    history. Send `['periods', 'price_history', 'gameplay']` to keep them. The `include` docs say
+    so.
+- **`EndpointRemovedError`** for `410 ENDPOINT_REMOVED`, mapped from the v1 `{ error, code }`
+  body, the v2 `problem+json` body, and a bare `410`. Since 2026-11-03 `/v1/variants` and
+  `/v1/cards-search` return it. The SDK never calls either endpoint (`client.v1.cards` covers
+  both), so this only shows up for hand-built requests or endpoints retired after a release.
+  Before this a `410` was thrown as a `ValidationError`.
+- New example: `examples/v2-gameplay-and-print-details.ts`.
+
+### Changed
+
+- Docs:
+  - `price_status` on `V2Market` and the `PriceStatus` type no longer say graded variants are
+    only ever `current` or `unpriced`. They describe both expiry rules: raw (14 days without a
+    report) and graded (90 days after the last sale).
+  - A graded price is documented as the weighted median of the slab's sales in the last 90 days,
+    with newer sales counting more (API changelog 2026-10-30). It is always one of the actual sale
+    prices.
+  - `updated_after` on v2 (`V2CardsParams` and `V2BatchOptions`) now returns graded variants:
+    when a new sale is recorded, when a sale leaves a `periods` window, and when the price
+    expires. Graded sales can reach the API days late, so a graded variant can come back with an
+    `updated_at` older than your last sync.
+  - `toV1Card` lists `print_details`, `gameplay`, `last_sale_at` and `price_expires_at` among the
+    fields that do not round-trip.
+
 ## [0.6.0] - 2026-10-21
 
 > **Breaking (TypeScript types only):** v1 `Variant.price` and `Variant.lastUpdated` are now

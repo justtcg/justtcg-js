@@ -24,6 +24,7 @@ const CARD: V2Card = {
   rarity: 'Rare Holo',
   external_ids: { tcgplayer: '42', scryfall: null, mtgjson: null },
   details: null,
+  print_details: null,
   variants: [
     {
       id: 'e72a67fe-922e-5662-bcfc-e8cb509f8220',
@@ -41,6 +42,8 @@ const CARD: V2Card = {
           price: 420.69,
           price_status: 'current',
           last_price: null,
+          last_sale_at: null,
+          price_expires_at: null,
           updated_at: 1_763_000_000,
           change_24h_pct: 2.5,
           periods: { '7d': { avg: 410, min: 400, max: 430 } },
@@ -131,6 +134,28 @@ describe('v2 cards', () => {
       expect(url.searchParams.get('min_price')).toBe('10');
       expect(url.searchParams.get('order_by')).toBe('30d');
       expect(url.searchParams.get('limit')).toBe('50');
+    });
+
+    it('requests gameplay and returns it with print_details on the card', async () => {
+      const card = {
+        ...CARD,
+        print_details: null,
+        gameplay: {
+          source: 'tcgdex',
+          legalities: { standard: 'legal', expanded: 'legal' },
+          artist: 'Ken Sugimori',
+          facts: { hp: 120, types: ['Fire'], stage: 'Stage2', retreat: 3 },
+        },
+      };
+      const fetchMock = mockFetch({ data: [card] });
+
+      const result = await client.v2.cards.get({ card_id: CARD.id, include: ['gameplay'] });
+
+      expect(calledUrl(fetchMock).searchParams.get('include')).toBe('gameplay');
+      const gameplay = result.data[0].gameplay;
+      expect(gameplay?.source).toBe('tcgdex');
+      if (gameplay?.source === 'tcgdex') expect(gameplay.facts.hp).toBe(120);
+      expect(result.data[0].print_details).toBeNull();
     });
 
     it('types order_by with the v2 enum, which has no 90d', async () => {
@@ -565,6 +590,18 @@ describe('v2 cards', () => {
       await client.v2.cards.getByBatch([{ card_id: CARD.id }], { include: ['periods'] });
 
       expect(calledUrl(fetchMock).search).toBe('?include=periods');
+    });
+
+    it('sends include=gameplay alongside the components it would otherwise replace', async () => {
+      const fetchMock = mockFetch({ data: [] });
+
+      await client.v2.cards.getByBatch([{ card_id: CARD.id }], {
+        include: ['periods', 'price_history', 'gameplay'],
+      });
+
+      expect(calledUrl(fetchMock).searchParams.get('include')).toBe(
+        'periods,price_history,gameplay',
+      );
     });
 
     it('exposes meta.count as pagination.count, counting cards rather than items', async () => {
